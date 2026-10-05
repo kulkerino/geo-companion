@@ -47,6 +47,27 @@ boundary, health endpoint, React shell, and audit/vault conventions.
   `pnpm --dir apps/web lint`, `pnpm --dir apps/web typecheck`,
   `pnpm --dir apps/web build`, and the audit command all exited 0.
 
+### Second audit-gap remediation
+
+- RED: `/home/kulo/.local/bin/uv run pytest
+  packages/api/tests/test_repository_audit.py` collected 10 tests: 3 failed
+  and 7 passed. A force-added ignored `data/local/private-pack/image.jpg`, a
+  private-key fixture, and a secret placed after 1 MB each escaped the audit.
+- GREEN: the same focused command passed 10 tests after the audit began
+  checking Git-tracked ignored paths and reading content in bounded 64 KiB
+  chunks with a 1 KiB overlap. `/home/kulo/.local/bin/uv run ruff check
+  packages/api/tests/test_repository_audit.py tools/audit_repository.py`,
+  `/home/kulo/.local/bin/uv run mypy tools/audit_repository.py`, and
+  `/home/kulo/.local/bin/uv run python tools/audit_repository.py --root .`
+  also exited 0.
+- Final: `/home/kulo/.local/bin/uv lock --check`, `/home/kulo/.local/bin/uv
+  run pytest` (14 passed), `/home/kulo/.local/bin/uv run ruff check .`,
+  `/home/kulo/.local/bin/uv run mypy`, `/home/kulo/.local/bin/uv run mypy
+  tools/audit_repository.py`, `pnpm install --frozen-lockfile`,
+  `pnpm --dir apps/web test` (1 passed), `pnpm --dir apps/web lint`,
+  `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web build`, and the audit
+  command all exited 0.
+
 ## Decisions
 
 - Data remains outside the vault even when `XDG_DATA_HOME` points inside a Git
