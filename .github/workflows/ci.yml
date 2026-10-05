@@ -29,5 +29,4 @@ jobs:
       - run: pnpm --dir apps/web lint
       - run: pnpm --dir apps/web typecheck
       - run: pnpm --dir apps/web build
-      - run: test -z "$(git ls-files -ci --exclude-standard)"
-      - run: test -z "$(git ls-files | rg '(^|/)(\.env|.*\.(sqlite3|db|onnx|pt|pth|safetensors))$')"
+      - run: uv run python tools/audit_repository.py --root .

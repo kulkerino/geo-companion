@@ -5,7 +5,8 @@
 ## Evidence
 
 - Commit:
-- Tests:
+- Commands and results:
 - Decisions:
+- Limitations and external gaps:
 
 ## Follow-up

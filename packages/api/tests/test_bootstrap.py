@@ -3,6 +3,22 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 
+import pytest
+
+
+@pytest.mark.parametrize("unsafe_relative_path", [".", "runtime-data"])
+def test_application_data_path_ignores_xdg_override_inside_repository(
+    monkeypatch: pytest.MonkeyPatch, unsafe_relative_path: str
+) -> None:
+    repository_root = Path(__file__).resolve().parents[3]
+    monkeypatch.setenv("XDG_DATA_HOME", str(repository_root / unsafe_relative_path))
+
+    from geo_companion.paths import application_data_dir
+
+    app_data_path = application_data_dir()
+
+    assert not app_data_path.resolve().is_relative_to(repository_root.resolve())
+
 
 def test_application_data_path_is_outside_repository() -> None:
     module_spec = importlib.util.find_spec("geo_companion.paths")

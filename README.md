@@ -32,10 +32,14 @@ pnpm --dir apps/web test
 pnpm --dir apps/web lint
 pnpm --dir apps/web typecheck
 pnpm --dir apps/web build
-git ls-files -ci --exclude-standard
-git ls-files | rg '(^|/)(\.env|.*\.(sqlite3|db|onnx|pt|pth|safetensors))$'
+uv run python tools/audit_repository.py --root .
 ```
 
 See [the project brief](docs/project-brief.md), [ethics boundary](docs/ethics-boundary.md),
 and [data policy](docs/data-policy.md) before adding content, data, models, or
 integrations.
+
+Obsidian's built-in Templates core plugin is enabled in
+`.obsidian/core-plugins.json` and is configured to use the committed
+[`templates/`](templates/) folder. Use `templates/session-note.md` for each
+substantive session.
