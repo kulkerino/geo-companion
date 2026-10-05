@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - run: uv sync --frozen --all-groups
+      - run: pnpm install --frozen-lockfile
+      - run: uv run pytest
+      - run: uv run ruff check .
+      - run: uv run mypy
+      - run: pnpm --dir apps/web test
+      - run: pnpm --dir apps/web lint
+      - run: pnpm --dir apps/web typecheck
+      - run: pnpm --dir apps/web build
+      - run: test -z "$(git ls-files -ci --exclude-standard)"
+      - run: test -z "$(git ls-files | rg '(^|/)(\.env|.*\.(sqlite3|db|onnx|pt|pth|safetensors))$')"

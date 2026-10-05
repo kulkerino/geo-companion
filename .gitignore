@@ -25,4 +25,5 @@ reports/generated/
 .obsidian/workspace*.json
 .obsidian/cache/
 .obsidian/trash/
-
+apps/web/dist/
+coverage/
