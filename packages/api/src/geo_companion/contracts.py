@@ -15,9 +15,7 @@ class ContractModel(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    def model_copy(
-        self, *, update: Mapping[str, Any] | None = None, deep: bool = False
-    ) -> Self:
+    def model_copy(self, *, update: Mapping[str, Any] | None = None, deep: bool = False) -> Self:
         """Forbid copying with updates so content versions cannot be rewritten."""
         if update:
             msg = "Contract models are immutable; create a new version instead."
@@ -82,6 +80,37 @@ class Lesson(ContractModel):
     quiz_items: tuple[QuizItem, ...]
 
 
+class QuizItemPublic(ContractModel):
+    """Quiz prompt shown before the learner commits an answer."""
+
+    quiz_id: str
+    prompt: str
+    choices: tuple[str, ...]
+
+
+class LessonPublic(ContractModel):
+    """A lesson projection that cannot leak the deterministic answer key."""
+
+    lesson_id: str
+    title: str
+    body: str
+    citations: tuple[Citation, ...]
+    quiz_items: tuple[QuizItemPublic, ...]
+
+
+class QuizAnswerSubmission(ContractModel):
+    selected_choice: str = Field(min_length=1)
+
+
+class QuizAnswerResult(ContractModel):
+    lesson_id: str
+    quiz_id: str
+    selected_choice: str
+    is_correct: bool
+    explanation: str
+    citations: tuple[Citation, ...]
+
+
 class Coordinate(ContractModel):
     latitude: float = Field(ge=-90, le=90)
     longitude: float = Field(ge=-180, le=180)
@@ -143,6 +172,14 @@ class PracticeAnswerSubmission(ContractModel):
 class PracticeReveal(ContractModel):
     round_id: str
     answer: SourceTruthAnswer
+
+
+class PracticeAnswerResult(PracticeReveal):
+    """Post-submission reveal with deterministic scoring and a local attempt identity."""
+
+    attempt_id: str
+    is_correct: bool
+    submission: PracticeAnswerSubmission
 
 
 class UserCorrection(ContractModel):

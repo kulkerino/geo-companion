@@ -220,11 +220,11 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
-      "Lesson": {
+      "LessonPublic": {
         "additionalProperties": false,
+        "description": "A lesson projection that cannot leak the deterministic answer key.",
         "properties": {
           "body": {
-            "minLength": 1,
             "title": "Body",
             "type": "string"
           },
@@ -232,24 +232,21 @@
             "items": {
               "$ref": "#/components/schemas/Citation"
             },
-            "minItems": 1,
             "title": "Citations",
             "type": "array"
           },
           "lesson_id": {
-            "minLength": 1,
             "title": "Lesson Id",
             "type": "string"
           },
           "quiz_items": {
             "items": {
-              "$ref": "#/components/schemas/QuizItem"
+              "$ref": "#/components/schemas/QuizItemPublic"
             },
             "title": "Quiz Items",
             "type": "array"
           },
           "title": {
-            "minLength": 1,
             "title": "Title",
             "type": "string"
           }
@@ -261,7 +258,7 @@
           "citations",
           "quiz_items"
         ],
-        "title": "Lesson",
+        "title": "LessonPublic",
         "type": "object"
       },
       "LessonSummary": {
@@ -341,6 +338,39 @@
         "title": "PacksResponse",
         "type": "object"
       },
+      "PracticeAnswerResult": {
+        "additionalProperties": false,
+        "description": "Post-submission reveal with deterministic scoring and a local attempt identity.",
+        "properties": {
+          "answer": {
+            "$ref": "#/components/schemas/SourceTruthAnswer"
+          },
+          "attempt_id": {
+            "title": "Attempt Id",
+            "type": "string"
+          },
+          "is_correct": {
+            "title": "Is Correct",
+            "type": "boolean"
+          },
+          "round_id": {
+            "title": "Round Id",
+            "type": "string"
+          },
+          "submission": {
+            "$ref": "#/components/schemas/PracticeAnswerSubmission"
+          }
+        },
+        "required": [
+          "round_id",
+          "answer",
+          "attempt_id",
+          "is_correct",
+          "submission"
+        ],
+        "title": "PracticeAnswerResult",
+        "type": "object"
+      },
       "PracticeAnswerSubmission": {
         "additionalProperties": false,
         "properties": {
@@ -393,24 +423,6 @@
         "title": "PracticeAnswerSubmission",
         "type": "object"
       },
-      "PracticeReveal": {
-        "additionalProperties": false,
-        "properties": {
-          "answer": {
-            "$ref": "#/components/schemas/SourceTruthAnswer"
-          },
-          "round_id": {
-            "title": "Round Id",
-            "type": "string"
-          }
-        },
-        "required": [
-          "round_id",
-          "answer"
-        ],
-        "title": "PracticeReveal",
-        "type": "object"
-      },
       "PracticeRoundPublic": {
         "additionalProperties": false,
         "description": "Pre-submission contract deliberately omitting both answer and coordinates.",
@@ -435,42 +447,79 @@
         "title": "PracticeRoundPublic",
         "type": "object"
       },
-      "QuizItem": {
+      "QuizAnswerResult": {
         "additionalProperties": false,
+        "properties": {
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/Citation"
+            },
+            "title": "Citations",
+            "type": "array"
+          },
+          "explanation": {
+            "title": "Explanation",
+            "type": "string"
+          },
+          "is_correct": {
+            "title": "Is Correct",
+            "type": "boolean"
+          },
+          "lesson_id": {
+            "title": "Lesson Id",
+            "type": "string"
+          },
+          "quiz_id": {
+            "title": "Quiz Id",
+            "type": "string"
+          },
+          "selected_choice": {
+            "title": "Selected Choice",
+            "type": "string"
+          }
+        },
+        "required": [
+          "lesson_id",
+          "quiz_id",
+          "selected_choice",
+          "is_correct",
+          "explanation",
+          "citations"
+        ],
+        "title": "QuizAnswerResult",
+        "type": "object"
+      },
+      "QuizAnswerSubmission": {
+        "additionalProperties": false,
+        "properties": {
+          "selected_choice": {
+            "minLength": 1,
+            "title": "Selected Choice",
+            "type": "string"
+          }
+        },
+        "required": [
+          "selected_choice"
+        ],
+        "title": "QuizAnswerSubmission",
+        "type": "object"
+      },
+      "QuizItemPublic": {
+        "additionalProperties": false,
+        "description": "Quiz prompt shown before the learner commits an answer.",
         "properties": {
           "choices": {
             "items": {
               "type": "string"
             },
-            "minItems": 2,
             "title": "Choices",
             "type": "array"
           },
-          "citations": {
-            "items": {
-              "$ref": "#/components/schemas/Citation"
-            },
-            "minItems": 1,
-            "title": "Citations",
-            "type": "array"
-          },
-          "correct_choice": {
-            "minLength": 1,
-            "title": "Correct Choice",
-            "type": "string"
-          },
-          "explanation": {
-            "minLength": 1,
-            "title": "Explanation",
-            "type": "string"
-          },
           "prompt": {
-            "minLength": 1,
             "title": "Prompt",
             "type": "string"
           },
           "quiz_id": {
-            "minLength": 1,
             "title": "Quiz Id",
             "type": "string"
           }
@@ -478,12 +527,9 @@
         "required": [
           "quiz_id",
           "prompt",
-          "choices",
-          "correct_choice",
-          "explanation",
-          "citations"
+          "choices"
         ],
-        "title": "QuizItem",
+        "title": "QuizItemPublic",
         "type": "object"
       },
       "RightsStatus": {
@@ -649,7 +695,7 @@
   "paths": {
     "/api/v1/feedback": {
       "post": {
-        "description": "Reject feedback until Task 3 adds local persistence rather than discarding it.",
+        "description": "Persist local feedback; reports remain separate from verified source truth.",
         "operationId": "submit_feedback_api_v1_feedback_post",
         "requestBody": {
           "content": {
@@ -662,6 +708,9 @@
           "required": true
         },
         "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
           "422": {
             "content": {
               "application/json": {
@@ -671,14 +720,6 @@
               }
             },
             "description": "Validation Error"
-          },
-          "501": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
           }
         },
         "summary": "Submit Feedback"
@@ -709,7 +750,7 @@
     },
     "/api/v1/lessons": {
       "get": {
-        "description": "List lessons from active cleared packs; empty is safe before activation exists.",
+        "description": "List the three original, cleared starter lessons.",
         "operationId": "list_lessons_api_v1_lessons_get",
         "responses": {
           "200": {
@@ -728,7 +769,7 @@
     },
     "/api/v1/lessons/{lesson_id}": {
       "get": {
-        "description": "Reserve the lesson detail contract without exposing unpublished content.",
+        "description": "Return a safe lesson projection; its quiz key is not serialised.",
         "operationId": "get_lesson_api_v1_lessons__lesson_id__get",
         "parameters": [
           {
@@ -746,7 +787,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Lesson"
+                  "$ref": "#/components/schemas/LessonPublic"
                 }
               }
             },
@@ -766,9 +807,68 @@
         "summary": "Get Lesson"
       }
     },
+    "/api/v1/lessons/{lesson_id}/quizzes/{quiz_id}/answers": {
+      "post": {
+        "description": "Check one deterministic quiz answer and release its cited explanation.",
+        "operationId": "submit_quiz_answer_api_v1_lessons__lesson_id__quizzes__quiz_id__answers_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lesson_id",
+            "required": true,
+            "schema": {
+              "title": "Lesson Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "quiz_id",
+            "required": true,
+            "schema": {
+              "title": "Quiz Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuizAnswerSubmission"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuizAnswerResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Submit Quiz Answer"
+      }
+    },
     "/api/v1/packs": {
       "get": {
-        "description": "List active packs; Task 4 will populate this from atomically activated storage.",
+        "description": "Expose the immutable bundled starter pack without a lifecycle/install flow.",
         "operationId": "list_packs_api_v1_packs_get",
         "responses": {
           "200": {
@@ -787,7 +887,7 @@
     },
     "/api/v1/practice/rounds/next": {
       "get": {
-        "description": "A pre-submit round would omit its answer; no activated round exists yet.",
+        "description": "Serve an original diagram only; answers never leave this route before submission.",
         "operationId": "next_practice_round_api_v1_practice_rounds_next_get",
         "responses": {
           "200": {
@@ -806,7 +906,7 @@
     },
     "/api/v1/practice/rounds/{round_id}/answers": {
       "post": {
-        "description": "Reserve post-submit reveal; Task 3 will grade and reveal verified source truth.",
+        "description": "Persist the pseudonymous attempt, then reveal independently sourced truth.",
         "operationId": "submit_practice_answer_api_v1_practice_rounds__round_id__answers_post",
         "parameters": [
           {
@@ -834,7 +934,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PracticeReveal"
+                  "$ref": "#/components/schemas/PracticeAnswerResult"
                 }
               }
             },
@@ -856,7 +956,7 @@
     },
     "/api/v1/study/grades": {
       "post": {
-        "description": "Reserve the SM-2 grade command without calculating a schedule in Task 2.",
+        "description": "Apply standard SM-2 to the local review queue.",
         "operationId": "record_study_grade_api_v1_study_grades_post",
         "requestBody": {
           "content": {
@@ -895,7 +995,7 @@
     },
     "/api/v1/study/progress/{lesson_id}": {
       "get": {
-        "description": "Expose a stable not-found contract before the learner scheduler is implemented.",
+        "description": "Return persisted pseudonymous SM-2 state for one lesson.",
         "operationId": "get_study_progress_api_v1_study_progress__lesson_id__get",
         "parameters": [
           {

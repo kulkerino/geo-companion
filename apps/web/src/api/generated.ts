@@ -43,12 +43,12 @@ export interface HTTPValidationError {
   detail?: Array<ValidationError>;
 }
 
-export interface Lesson {
+export interface LessonPublic {
   lesson_id: string;
   title: string;
   body: string;
   citations: Array<Citation>;
-  quiz_items: Array<QuizItem>;
+  quiz_items: Array<QuizItemPublic>;
 }
 
 export interface LessonSummary {
@@ -70,6 +70,14 @@ export interface PacksResponse {
   packs: Array<PackSummary>;
 }
 
+export interface PracticeAnswerResult {
+  round_id: string;
+  answer: SourceTruthAnswer;
+  attempt_id: string;
+  is_correct: boolean;
+  submission: PracticeAnswerSubmission;
+}
+
 export interface PracticeAnswerSubmission {
   country_code?: string | null;
   region_code?: string | null;
@@ -78,24 +86,29 @@ export interface PracticeAnswerSubmission {
   uncertain?: boolean;
 }
 
-export interface PracticeReveal {
-  round_id: string;
-  answer: SourceTruthAnswer;
-}
-
 export interface PracticeRoundPublic {
   round_id: string;
   asset_id: string;
   asset_attribution: Attribution;
 }
 
-export interface QuizItem {
+export interface QuizAnswerResult {
+  lesson_id: string;
+  quiz_id: string;
+  selected_choice: string;
+  is_correct: boolean;
+  explanation: string;
+  citations: Array<Citation>;
+}
+
+export interface QuizAnswerSubmission {
+  selected_choice: string;
+}
+
+export interface QuizItemPublic {
   quiz_id: string;
   prompt: string;
   choices: Array<string>;
-  correct_choice: string;
-  explanation: string;
-  citations: Array<Citation>;
 }
 
 export type RightsStatus = "cleared" | "reference-only" | "quarantined";
@@ -167,9 +180,15 @@ export class GeoCompanionApiClient {
     );
   }
 
-  async get_lesson_api_v1_lessons__lesson_id__get(lesson_id: string): Promise<Lesson> {
-    return this.request<Lesson>(
+  async get_lesson_api_v1_lessons__lesson_id__get(lesson_id: string): Promise<LessonPublic> {
+    return this.request<LessonPublic>(
       "GET", "/api/v1/lessons/{lesson_id}", { "lesson_id": String(lesson_id) }, undefined,
+    );
+  }
+
+  async submit_quiz_answer_api_v1_lessons__lesson_id__quizzes__quiz_id__answers_post(lesson_id: string, quiz_id: string, body: QuizAnswerSubmission): Promise<QuizAnswerResult> {
+    return this.request<QuizAnswerResult>(
+      "POST", "/api/v1/lessons/{lesson_id}/quizzes/{quiz_id}/answers", { "lesson_id": String(lesson_id), "quiz_id": String(quiz_id) }, body,
     );
   }
 
@@ -185,8 +204,8 @@ export class GeoCompanionApiClient {
     );
   }
 
-  async submit_practice_answer_api_v1_practice_rounds__round_id__answers_post(round_id: string, body: PracticeAnswerSubmission): Promise<PracticeReveal> {
-    return this.request<PracticeReveal>(
+  async submit_practice_answer_api_v1_practice_rounds__round_id__answers_post(round_id: string, body: PracticeAnswerSubmission): Promise<PracticeAnswerResult> {
+    return this.request<PracticeAnswerResult>(
       "POST", "/api/v1/practice/rounds/{round_id}/answers", { "round_id": String(round_id) }, body,
     );
   }
