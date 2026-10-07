@@ -121,10 +121,23 @@ class PracticeRoundPublic(ContractModel):
 
 
 class PracticeAnswerSubmission(ContractModel):
-    country_code: str = Field(min_length=2, max_length=2)
+    country_code: str | None = Field(default=None, min_length=2, max_length=2)
+    region_code: str | None = Field(default=None, min_length=1)
     coordinate: Coordinate | None = None
     skipped: bool = False
     uncertain: bool = False
+
+    @model_validator(mode="after")
+    def skip_and_guess_are_exclusive(self) -> PracticeAnswerSubmission:
+        guess_fields = (self.country_code, self.region_code, self.coordinate)
+        if self.skipped:
+            if any(field is not None for field in guess_fields):
+                msg = "Skipped practice answers cannot include country, region, or coordinates."
+                raise ValueError(msg)
+        elif self.country_code is None or self.coordinate is None:
+            msg = "Submitted practice answers require country_code and coordinate."
+            raise ValueError(msg)
+        return self
 
 
 class PracticeReveal(ContractModel):
@@ -184,9 +197,26 @@ class ModelManifest(ContractModel):
     """Metadata for an optional local artifact; never a request to download one."""
 
     model_id: str = Field(min_length=1)
+    version: str = Field(pattern=r"^\d+\.\d+\.\d+$")
     artifact_hash: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
     runtime: Literal["onnx", "pytorch"]
     required_for_learning: Literal[False] = False
+
+
+class ModelArtifactReference(ContractModel):
+    """Immutable identity used to bind experiments to an exact model artifact."""
+
+    model_id: str = Field(min_length=1)
+    version: str = Field(pattern=r"^\d+\.\d+\.\d+$")
+    artifact_hash: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
+
+    @classmethod
+    def from_manifest(cls, manifest: ModelManifest) -> ModelArtifactReference:
+        return cls(
+            model_id=manifest.model_id,
+            version=manifest.version,
+            artifact_hash=manifest.artifact_hash,
+        )
 
 
 class ExperimentStatus(StrEnum):
@@ -198,7 +228,7 @@ class ExperimentStatus(StrEnum):
 
 class Experiment(ContractModel):
     experiment_id: str = Field(min_length=1)
-    model_id: str = Field(min_length=1)
+    model: ModelArtifactReference
     status: ExperimentStatus
     answer_source: Literal[AnswerOrigin.SOURCE_TRUTH]
 

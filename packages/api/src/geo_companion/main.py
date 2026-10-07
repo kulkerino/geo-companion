@@ -86,10 +86,14 @@ def submit_practice_answer(round_id: str, submission: PracticeAnswerSubmission) 
     )
 
 
-@app.post("/api/v1/feedback", status_code=status.HTTP_202_ACCEPTED)
-def submit_feedback(feedback: Feedback) -> Feedback:
-    """Echo structurally valid feedback until Task 3 adds local persistence."""
-    return feedback
+@app.post("/api/v1/feedback", status_code=status.HTTP_501_NOT_IMPLEMENTED)
+def submit_feedback(feedback: Feedback) -> None:
+    """Reject feedback until Task 3 adds local persistence rather than discarding it."""
+    del feedback
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail="Feedback persistence is not implemented yet.",
+    )
 
 
 @app.get("/api/v1/study/progress/{lesson_id}", response_model=StudyProgress)

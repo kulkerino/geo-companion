@@ -84,19 +84,67 @@ def test_answer_origins_are_separate_from_source_truth() -> None:
     assert feedback.round_id == "r1"
 
 
+def test_skipped_practice_answer_has_no_guess_metadata() -> None:
+    from geo_companion.contracts import PracticeAnswerSubmission
+
+    skipped = PracticeAnswerSubmission(skipped=True)
+
+    assert skipped.country_code is None
+    assert skipped.region_code is None
+    assert skipped.coordinate is None
+
+
+@pytest.mark.parametrize(
+    "submission",
+    [
+        {"skipped": True, "country_code": "SK"},
+        {"skipped": True, "region_code": "Bratislava"},
+        {"skipped": True, "coordinate": {"latitude": 48.1486, "longitude": 17.1077}},
+        {"skipped": False, "coordinate": {"latitude": 48.1486, "longitude": 17.1077}},
+        {"skipped": False, "country_code": "SK"},
+    ],
+)
+def test_practice_answer_rejects_mixed_skip_or_incomplete_guess(
+    submission: dict[str, object],
+) -> None:
+    from geo_companion.contracts import PracticeAnswerSubmission
+
+    with pytest.raises(ValidationError):
+        PracticeAnswerSubmission.model_validate(submission)
+
+
+def test_submitted_practice_answer_requires_country_and_coordinate() -> None:
+    from geo_companion.contracts import PracticeAnswerSubmission
+
+    answer = PracticeAnswerSubmission(
+        country_code="SK",
+        region_code="Bratislava",
+        coordinate={"latitude": 48.1486, "longitude": 17.1077},
+    )
+
+    assert answer.skipped is False
+    assert answer.country_code == "SK"
+
+
 def test_study_model_and_experiment_contracts_keep_optional_model_offline_safe() -> None:
-    from geo_companion.contracts import Experiment, ModelManifest, StudyProgress
+    from geo_companion.contracts import (
+        Experiment,
+        ModelArtifactReference,
+        ModelManifest,
+        StudyProgress,
+    )
 
     progress = StudyProgress(lesson_id="bollards", repetitions=2, interval_days=6, ease_factor=2.5)
     manifest = ModelManifest(
         model_id="student-small.onnx",
+        version="1.0.0",
         artifact_hash="sha256:" + "1" * 64,
         runtime="onnx",
         required_for_learning=False,
     )
     experiment = Experiment(
         experiment_id="shadow-1",
-        model_id=manifest.model_id,
+        model=ModelArtifactReference.from_manifest(manifest),
         status="shadow",
         answer_source="source_truth",
     )
@@ -104,3 +152,15 @@ def test_study_model_and_experiment_contracts_keep_optional_model_offline_safe()
     assert progress.next_review_on is not None
     assert manifest.required_for_learning is False
     assert experiment.status == "shadow"
+
+
+def test_experiment_rejects_an_ambiguous_model_identity() -> None:
+    from geo_companion.contracts import Experiment
+
+    with pytest.raises(ValidationError):
+        Experiment(
+            experiment_id="ambiguous-model",
+            model_id="student-small.onnx",
+            status="shadow",
+            answer_source="source_truth",
+        )

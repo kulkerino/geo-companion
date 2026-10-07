@@ -5,12 +5,19 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
+from geo_companion.paths import application_data_dir
+
 MIGRATION_ID = "0001_contract_foundation"
 MIGRATION_PATH = Path(__file__).resolve().parents[2] / "migrations" / f"{MIGRATION_ID}.sql"
 
 
 def initialize_database(path: Path) -> Path:
     """Create a local SQLite database and apply the first idempotent migration."""
+    application_data_path = application_data_dir().resolve()
+    resolved_path = path.resolve()
+    if not resolved_path.is_relative_to(application_data_path):
+        msg = "SQLite database paths must be inside the Geo Companion application-data directory."
+        raise ValueError(msg)
     path.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(path) as connection:
         connection.execute("PRAGMA foreign_keys = ON")

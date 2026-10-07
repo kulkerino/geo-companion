@@ -355,10 +355,29 @@
             ]
           },
           "country_code": {
-            "maxLength": 2,
-            "minLength": 2,
-            "title": "Country Code",
-            "type": "string"
+            "anyOf": [
+              {
+                "maxLength": 2,
+                "minLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country Code"
+          },
+          "region_code": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region Code"
           },
           "skipped": {
             "default": false,
@@ -371,9 +390,6 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "country_code"
-        ],
         "title": "PracticeAnswerSubmission",
         "type": "object"
       },
@@ -633,7 +649,7 @@
   "paths": {
     "/api/v1/feedback": {
       "post": {
-        "description": "Echo structurally valid feedback until Task 3 adds local persistence.",
+        "description": "Reject feedback until Task 3 adds local persistence rather than discarding it.",
         "operationId": "submit_feedback_api_v1_feedback_post",
         "requestBody": {
           "content": {
@@ -646,16 +662,6 @@
           "required": true
         },
         "responses": {
-          "202": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Feedback"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
           "422": {
             "content": {
               "application/json": {
@@ -665,6 +671,14 @@
               }
             },
             "description": "Validation Error"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
           }
         },
         "summary": "Submit Feedback"

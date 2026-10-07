@@ -32,3 +32,15 @@ def test_openapi_advertises_versioned_learning_contracts() -> None:
     assert "/api/v1/lessons" in paths
     assert "/api/v1/practice/rounds/next" in paths
     assert "/api/v1/study/progress/{lesson_id}" in paths
+
+
+def test_unimplemented_feedback_is_honestly_deferred() -> None:
+    from geo_companion.main import app
+
+    response = TestClient(app).post(
+        "/api/v1/feedback",
+        json={"round_id": "r1", "rating": 3, "note": "Useful explanation."},
+    )
+
+    assert response.status_code == 501
+    assert response.json() == {"detail": "Feedback persistence is not implemented yet."}

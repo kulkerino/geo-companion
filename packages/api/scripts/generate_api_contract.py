@@ -78,11 +78,21 @@ def response_type(operation: Mapping[str, Any]) -> str:
     return ts_type(schema) if isinstance(schema, Mapping) else "void"
 
 
-def request_type(operation: Mapping[str, Any]) -> str | None:
+def request_body(operation: Mapping[str, Any]) -> tuple[str, bool] | None:
     request_body = operation.get("requestBody", {})
     content = request_body.get("content", {})
     schema = content.get("application/json", {}).get("schema")
-    return ts_type(schema) if isinstance(schema, Mapping) else None
+    if not isinstance(schema, Mapping):
+        return None
+    return ts_type(schema), bool(request_body.get("required", False))
+
+
+def path_parameters(operation: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    return [
+        parameter
+        for parameter in operation.get("parameters", [])
+        if parameter.get("in") == "path"
+    ]
 
 
 def render_client(openapi: Mapping[str, Any]) -> str:
@@ -92,16 +102,27 @@ def render_client(openapi: Mapping[str, Any]) -> str:
             if method not in {"delete", "get", "patch", "post", "put"}:
                 continue
             operation_id = operation["operationId"]
-            body_type = request_type(operation)
+            body = request_body(operation)
             return_type = response_type(operation)
-            body_argument = f", body?: {body_type}" if body_type else ""
-            options = "body" if body_type else "undefined"
+            parameters = path_parameters(operation)
+            arguments = [
+                f"{parameter['name']}: {ts_type(parameter['schema'])}" for parameter in parameters
+            ]
+            path_values = ", ".join(
+                f'"{parameter["name"]}": String({parameter["name"]})' for parameter in parameters
+            )
+            path_argument = f"{{ {path_values} }}" if path_values else "{}"
+            body_argument = "undefined"
+            if body is not None:
+                body_type, body_required = body
+                arguments.append(f"body{'' if body_required else '?'}: {body_type}")
+                body_argument = "body"
             methods.append(
                 "  async "
-                f"{operation_id}(pathParams: Record<string, string> = {{}}{body_argument}): "
+                f"{operation_id}({', '.join(arguments)}): "
                 f"Promise<{return_type}> {{\n"
                 f"    return this.request<{return_type}>(\n"
-                f"      \"{method.upper()}\", \"{path}\", pathParams, {options},\n"
+                f"      \"{method.upper()}\", \"{path}\", {path_argument}, {body_argument},\n"
                 "    );\n"
                 "  }"
             )

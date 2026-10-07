@@ -63,3 +63,50 @@ All commands exited 0:
   and atomic active-pack lifecycle behavior.
 - No content pack is activated or bundled by this task, and the API therefore
   returns empty/not-found placeholders rather than inventing content.
+
+## 2026-10-07 review remediation
+
+### Decisions
+
+- A skipped practice answer is now a genuine no-guess state: country, region,
+  and coordinates are all absent. A non-skipped answer requires a country and
+  coordinate, with an optional region.
+- The generated TypeScript client uses OpenAPI-required request bodies and
+  path parameters as required method arguments; a checked-in compile-only use
+  fixture exercises both valid calls and `@ts-expect-error` omitted arguments.
+- Feedback returns HTTP 501 until local persistence exists, rather than
+  acknowledging and discarding learner feedback.
+- SQLite initialization validates the resolved target against the resolved
+  `application_data_dir()` root before creating a parent directory, rejecting
+  vault paths and application-data symlink escapes.
+- Model manifests now have immutable semantic versions. Experiments reference
+  a `ModelArtifactReference` containing model ID, version, and artifact hash,
+  preventing model-ID-only ambiguity.
+
+### TDD evidence
+
+- RED: `/home/kulo/.local/bin/uv run pytest packages/api/tests/test_contracts.py
+  packages/api/tests/test_contract_api.py
+  packages/api/tests/test_storage_and_generated_api.py -q; pnpm --dir apps/web
+  typecheck` produced 9 expected Python failures and 16 passes. The failures
+  covered impossible skipped submissions, accepted mixed/incomplete guesses,
+  missing model artifact reference, accepted ambiguous experiments, feedback
+  HTTP 202, unguarded storage paths, and stale generated client signatures.
+- GREEN: after the contract, storage, endpoint, and generator changes, the
+  focused Python suite passed 25 tests and `pnpm --dir apps/web typecheck`
+  exited 0.
+
+### Final verification
+
+All commands exited 0:
+
+- `/home/kulo/.local/bin/uv lock --check`
+- `/home/kulo/.local/bin/uv run ruff check .`
+- `/home/kulo/.local/bin/uv run mypy` — 5 source files, no issues
+- `/home/kulo/.local/bin/uv run pytest` — 39 passed
+- `/home/kulo/.local/bin/uv run python packages/api/scripts/generate_api_contract.py --check`
+- `pnpm --dir apps/web test` — 1 passed
+- `pnpm --dir apps/web lint`
+- `pnpm --dir apps/web typecheck`
+- `pnpm --dir apps/web build`
+- `/home/kulo/.local/bin/uv run python tools/audit_repository.py --root .`

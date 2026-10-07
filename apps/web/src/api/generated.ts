@@ -71,7 +71,8 @@ export interface PacksResponse {
 }
 
 export interface PracticeAnswerSubmission {
-  country_code: string;
+  country_code?: string | null;
+  region_code?: string | null;
   coordinate?: Coordinate | null;
   skipped?: boolean;
   uncertain?: boolean;
@@ -148,57 +149,57 @@ export class GeoCompanionApiClient {
     return response.status === 204 ? (undefined as T) : (await response.json()) as T;
   }
 
-  async submit_feedback_api_v1_feedback_post(pathParams: Record<string, string> = {}, body?: Feedback): Promise<Feedback> {
-    return this.request<Feedback>(
-      "POST", "/api/v1/feedback", pathParams, body,
+  async submit_feedback_api_v1_feedback_post(body: Feedback): Promise<void> {
+    return this.request<void>(
+      "POST", "/api/v1/feedback", {}, body,
     );
   }
 
-  async health_api_v1_health_get(pathParams: Record<string, string> = {}): Promise<Record<string, string>> {
+  async health_api_v1_health_get(): Promise<Record<string, string>> {
     return this.request<Record<string, string>>(
-      "GET", "/api/v1/health", pathParams, undefined,
+      "GET", "/api/v1/health", {}, undefined,
     );
   }
 
-  async list_lessons_api_v1_lessons_get(pathParams: Record<string, string> = {}): Promise<LessonsResponse> {
+  async list_lessons_api_v1_lessons_get(): Promise<LessonsResponse> {
     return this.request<LessonsResponse>(
-      "GET", "/api/v1/lessons", pathParams, undefined,
+      "GET", "/api/v1/lessons", {}, undefined,
     );
   }
 
-  async get_lesson_api_v1_lessons__lesson_id__get(pathParams: Record<string, string> = {}): Promise<Lesson> {
+  async get_lesson_api_v1_lessons__lesson_id__get(lesson_id: string): Promise<Lesson> {
     return this.request<Lesson>(
-      "GET", "/api/v1/lessons/{lesson_id}", pathParams, undefined,
+      "GET", "/api/v1/lessons/{lesson_id}", { "lesson_id": String(lesson_id) }, undefined,
     );
   }
 
-  async list_packs_api_v1_packs_get(pathParams: Record<string, string> = {}): Promise<PacksResponse> {
+  async list_packs_api_v1_packs_get(): Promise<PacksResponse> {
     return this.request<PacksResponse>(
-      "GET", "/api/v1/packs", pathParams, undefined,
+      "GET", "/api/v1/packs", {}, undefined,
     );
   }
 
-  async next_practice_round_api_v1_practice_rounds_next_get(pathParams: Record<string, string> = {}): Promise<PracticeRoundPublic> {
+  async next_practice_round_api_v1_practice_rounds_next_get(): Promise<PracticeRoundPublic> {
     return this.request<PracticeRoundPublic>(
-      "GET", "/api/v1/practice/rounds/next", pathParams, undefined,
+      "GET", "/api/v1/practice/rounds/next", {}, undefined,
     );
   }
 
-  async submit_practice_answer_api_v1_practice_rounds__round_id__answers_post(pathParams: Record<string, string> = {}, body?: PracticeAnswerSubmission): Promise<PracticeReveal> {
+  async submit_practice_answer_api_v1_practice_rounds__round_id__answers_post(round_id: string, body: PracticeAnswerSubmission): Promise<PracticeReveal> {
     return this.request<PracticeReveal>(
-      "POST", "/api/v1/practice/rounds/{round_id}/answers", pathParams, body,
+      "POST", "/api/v1/practice/rounds/{round_id}/answers", { "round_id": String(round_id) }, body,
     );
   }
 
-  async record_study_grade_api_v1_study_grades_post(pathParams: Record<string, string> = {}, body?: StudyGrade): Promise<StudyProgress> {
+  async record_study_grade_api_v1_study_grades_post(body: StudyGrade): Promise<StudyProgress> {
     return this.request<StudyProgress>(
-      "POST", "/api/v1/study/grades", pathParams, body,
+      "POST", "/api/v1/study/grades", {}, body,
     );
   }
 
-  async get_study_progress_api_v1_study_progress__lesson_id__get(pathParams: Record<string, string> = {}): Promise<StudyProgress> {
+  async get_study_progress_api_v1_study_progress__lesson_id__get(lesson_id: string): Promise<StudyProgress> {
     return this.request<StudyProgress>(
-      "GET", "/api/v1/study/progress/{lesson_id}", pathParams, undefined,
+      "GET", "/api/v1/study/progress/{lesson_id}", { "lesson_id": String(lesson_id) }, undefined,
     );
   }
 }
