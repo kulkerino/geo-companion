@@ -22,6 +22,19 @@ Open `http://127.0.0.1:5173` for the development shell and
 will have FastAPI serve the built React application; it must remain bound to
 loopback and retain SQLite as the laptop's sole live database.
 
+The Vite development server proxies `/api/*` to the loopback FastAPI server;
+start both commands above, then use the Knowledge, Open Practice, and Study tabs.
+For a reproducible fresh learner database, set an explicit application-data
+directory before starting FastAPI:
+
+```bash
+GEO_COMPANION_DATA_DIR=/tmp/geo-companion-clean-start \
+  uv run uvicorn geo_companion.main:app --host 127.0.0.1 --port 8000
+```
+
+No request leaves the laptop: the bundled diagrams are original teaching assets,
+not Street View or other captured imagery.
+
 ## Verification
 
 ```bash

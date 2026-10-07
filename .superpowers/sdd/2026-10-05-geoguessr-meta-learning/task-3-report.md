@@ -65,3 +65,29 @@ All commands passed. The audit command is silent on success.
   documented and is loopback-only.
 - The starter pack intentionally contains diagrams, not cleared real-world imagery. Larger or
   third-party packs remain Task 4/5 work and must clear the existing attribution gate.
+
+## Corrective review evidence — 2026-10-07
+
+- Replaced the simulated web flow with generated-client requests for lesson listing/selection,
+  lesson quiz, grade, practice next/clue/answer, attempt-linked feedback, and next local review.
+  The Vite development server now proxies `/api` to loopback FastAPI and README documents the
+  two-process native topology and `GEO_COMPANION_DATA_DIR` clean start.
+- Pre-answer browser state contains only the public round. The production-bundle test builds the
+  web app and proves the starter country name, coordinates, and hard-coded answer payload are
+  absent from JavaScript; the API test proves public round/clue payloads omit answer/coordinates.
+- Synthetic diagrams now carry distinct authored language/road-comparison clues. Their answer is
+  an `authored` teaching target with no fabricated coordinate, never a claimed geolocated image.
+  Original diagrams/text are CC0; UNECE is accurately `reference-only` factual context. Pack
+  validation permits such citations but rejects quarantined sources and requires cleared assets.
+- Skip, uncertain guess, and skip-as-uncertain are distinct submissions. Attempts rotate through
+  rounds; answer results create a practice review schedule. Feedback requires the actual attempt
+  ID, updates only that attempt's report flag, and never promotes a dispute to source truth.
+- SM-2 now computes interval using the prior ease, then updates ease. The `(5, 5, 3)` regression
+  proves the third interval is 16; lapse behaviour remains covered.
+- Browser-flow evidence: the API-mocked Vitest flow asserts list/detail requests, quiz request
+  body and explanation, grade response, public practice no-leak, clue request, skip request,
+  post-reveal feedback attempt linkage, and a visible API error state.
+- Final commands: `uv run pytest -q` → 47 passed; Ruff, mypy, OpenAPI drift, Vitest, ESLint,
+  TypeScript, Vite build, and repository audit passed. The revised clean-start ASGI smoke created
+  only `/tmp/geo-companion-task3-corrective/runtime.sqlite3` and completed lesson→quiz→grade plus
+  public practice→clue→skip→reveal→attempt feedback→review without network access.

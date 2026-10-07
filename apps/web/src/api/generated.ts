@@ -33,6 +33,7 @@ export interface Coordinate {
 }
 
 export interface Feedback {
+  attempt_id: string;
   round_id: string;
   rating: number;
   note?: string | null;
@@ -47,6 +48,7 @@ export interface LessonPublic {
   lesson_id: string;
   title: string;
   body: string;
+  diagram_asset_id?: string | null;
   citations: Array<Citation>;
   quiz_items: Array<QuizItemPublic>;
 }
@@ -76,6 +78,7 @@ export interface PracticeAnswerResult {
   attempt_id: string;
   is_correct: boolean;
   submission: PracticeAnswerSubmission;
+  study_progress?: StudyProgress | null;
 }
 
 export interface PracticeAnswerSubmission {
@@ -84,6 +87,11 @@ export interface PracticeAnswerSubmission {
   coordinate?: Coordinate | null;
   skipped?: boolean;
   uncertain?: boolean;
+}
+
+export interface PracticeClue {
+  round_id: string;
+  clue: string;
 }
 
 export interface PracticeRoundPublic {
@@ -115,7 +123,7 @@ export type RightsStatus = "cleared" | "reference-only" | "quarantined";
 
 export interface SourceTruthAnswer {
   country_code: string;
-  coordinate: Coordinate;
+  coordinate?: Coordinate | null;
   explanation: string;
   citations: Array<Citation>;
   answer_origin: "source_truth" | "authored";
@@ -133,6 +141,10 @@ export interface StudyProgress {
   interval_days: number;
   ease_factor: number;
   last_reviewed_on?: string;
+}
+
+export interface StudyReview {
+  progress?: StudyProgress | null;
 }
 
 export interface ValidationError {
@@ -158,7 +170,12 @@ export class GeoCompanionApiClient {
       headers: body === undefined ? undefined : { "content-type": "application/json" },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
-    if (!response.ok) throw new Error(`Geo Companion API request failed: ${response.status}`);
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => null) as { detail?: string } | null;
+      throw new Error(
+        errorBody?.detail ?? `Geo Companion API request failed: ${response.status}`,
+      );
+    }
     return response.status === 204 ? (undefined as T) : (await response.json()) as T;
   }
 
@@ -210,6 +227,12 @@ export class GeoCompanionApiClient {
     );
   }
 
+  async get_practice_clue_api_v1_practice_rounds__round_id__clue_get(round_id: string): Promise<PracticeClue> {
+    return this.request<PracticeClue>(
+      "GET", "/api/v1/practice/rounds/{round_id}/clue", { "round_id": String(round_id) }, undefined,
+    );
+  }
+
   async record_study_grade_api_v1_study_grades_post(body: StudyGrade): Promise<StudyProgress> {
     return this.request<StudyProgress>(
       "POST", "/api/v1/study/grades", {}, body,
@@ -219,6 +242,12 @@ export class GeoCompanionApiClient {
   async get_study_progress_api_v1_study_progress__lesson_id__get(lesson_id: string): Promise<StudyProgress> {
     return this.request<StudyProgress>(
       "GET", "/api/v1/study/progress/{lesson_id}", { "lesson_id": String(lesson_id) }, undefined,
+    );
+  }
+
+  async next_study_review_api_v1_study_review_next_get(): Promise<StudyReview> {
+    return this.request<StudyReview>(
+      "GET", "/api/v1/study/review/next", {}, undefined,
     );
   }
 }

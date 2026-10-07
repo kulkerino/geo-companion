@@ -156,7 +156,12 @@ export class GeoCompanionApiClient {{
       headers: body === undefined ? undefined : {{ "content-type": "application/json" }},
       body: body === undefined ? undefined : JSON.stringify(body),
     }});
-    if (!response.ok) throw new Error(`Geo Companion API request failed: ${{response.status}}`);
+    if (!response.ok) {{
+      const errorBody = await response.json().catch(() => null) as {{ detail?: string }} | null;
+      throw new Error(
+        errorBody?.detail ?? `Geo Companion API request failed: ${{response.status}}`,
+      );
+    }}
     return response.status === 204 ? (undefined as T) : (await response.json()) as T;
   }}
 

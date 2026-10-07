@@ -77,7 +77,9 @@ def test_answer_origins_are_separate_from_source_truth() -> None:
     prediction = ModelPrediction(
         round_id="r1", model_id="student-small.onnx", country_code="AT", confidence=0.4
     )
-    feedback = Feedback(round_id="r1", rating=3, note="I confused the bollard shape.")
+    feedback = Feedback(
+        attempt_id="attempt-1", round_id="r1", rating=3, note="I confused the bollard shape."
+    )
 
     assert correction.origin is AnswerOrigin.USER_CORRECTION
     assert prediction.origin is AnswerOrigin.MODEL_PREDICTION
@@ -101,7 +103,6 @@ def test_skipped_practice_answer_has_no_guess_metadata() -> None:
         {"skipped": True, "region_code": "Bratislava"},
         {"skipped": True, "coordinate": {"latitude": 48.1486, "longitude": 17.1077}},
         {"skipped": False, "coordinate": {"latitude": 48.1486, "longitude": 17.1077}},
-        {"skipped": False, "country_code": "SK"},
     ],
 )
 def test_practice_answer_rejects_mixed_skip_or_incomplete_guess(

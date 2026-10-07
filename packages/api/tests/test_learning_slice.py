@@ -25,6 +25,19 @@ def test_sm2_first_second_and_lapsed_reviews_are_deterministic(tmp_path: Path) -
     assert lapsed.next_review_on == date(2026, 10, 8)
 
 
+def test_sm2_uses_the_prior_ease_for_the_third_success_interval(tmp_path: Path) -> None:
+    from geo_companion.learning import LearningService
+
+    service = LearningService(tmp_path / "runtime.sqlite3")
+    reviewed_at = datetime(2026, 10, 7, 12, 0, tzinfo=UTC)
+
+    service.grade_lesson("road-sign-shapes", 5, reviewed_at)
+    service.grade_lesson("road-sign-shapes", 5, reviewed_at)
+    third = service.grade_lesson("road-sign-shapes", 3, reviewed_at)
+
+    assert (third.repetitions, third.interval_days, third.ease_factor) == (3, 16, 2.56)
+
+
 def test_lesson_quiz_hides_key_until_answer_then_returns_cited_explanation(tmp_path: Path) -> None:
     from geo_companion.learning import LearningService
 
@@ -36,7 +49,7 @@ def test_lesson_quiz_hides_key_until_answer_then_returns_cited_explanation(tmp_p
 
     assert result.is_correct is True
     assert "triangle" in result.explanation.lower()
-    assert result.citations[0].rights_status == "cleared"
+    assert result.citations[0].rights_status == "reference-only"
 
 
 def test_practice_public_payload_has_no_answer_or_coordinates_and_reveals_after_submission(
@@ -56,8 +69,10 @@ def test_practice_public_payload_has_no_answer_or_coordinates_and_reveals_after_
     )
 
     assert result.submission.skipped is True
-    assert result.answer.answer_origin == "source_truth"
-    assert result.answer.coordinate.latitude == pytest.approx(48.15)
+    assert result.answer.coordinate is None
+    assert result.answer.answer_origin == "authored"
+    assert result.study_progress is not None
+    assert result.study_progress.lesson_id == f"practice:{public_round.round_id}"
 
 
 def test_attempt_feedback_report_and_retry_are_persisted_without_promoting_a_dispute(
@@ -74,12 +89,12 @@ def test_attempt_feedback_report_and_retry_are_persisted_without_promoting_a_dis
     )
     service.record_feedback(
         Feedback(
+            attempt_id=attempt.attempt_id,
             round_id=round_.round_id,
             rating=1,
             note="The fixture label is unclear.",
             reported_issue=True,
-        ),
-        attempt.attempt_id,
+        )
     )
     retry = service.submit_practice(
         round_.round_id,
@@ -91,9 +106,31 @@ def test_attempt_feedback_report_and_retry_are_persisted_without_promoting_a_dis
     history = service.attempt_history(round_.round_id)
     assert len(history) == 2
     assert history[0]["reported_issue"] is True
-    assert history[0]["answer_origin"] == "source_truth"
+    assert history[0]["answer_origin"] == "authored"
     assert retry.is_correct is True
     assert "user_correction" not in str(history)
+
+
+def test_feedback_requires_and_updates_the_revealed_attempt_and_next_round_progresses(
+    tmp_path: Path,
+) -> None:
+    from geo_companion.contracts import Feedback, PracticeAnswerSubmission
+    from geo_companion.learning import LearningService
+
+    service = LearningService(tmp_path / "runtime.sqlite3")
+    first = service.next_round()
+    reveal = service.submit_practice(first.round_id, PracticeAnswerSubmission(skipped=True))
+    service.record_feedback(
+        Feedback(
+            attempt_id=reveal.attempt_id,
+            round_id=first.round_id,
+            rating=2,
+            reported_issue=True,
+        )
+    )
+
+    assert service.attempt_history(first.round_id)[0]["reported_issue"] is True
+    assert service.next_round().round_id != first.round_id
 
 
 def test_api_starter_slice_is_offline_and_keeps_answers_out_of_preanswer_responses(
@@ -128,4 +165,4 @@ def test_api_starter_slice_is_offline_and_keeps_answers_out_of_preanswer_respons
         )
     )
     assert reveal.status_code == 200
-    assert reveal.json()["answer"]["answer_origin"] == "source_truth"
+    assert reveal.json()["answer"]["answer_origin"] == "authored"

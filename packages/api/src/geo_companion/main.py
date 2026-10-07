@@ -11,11 +11,13 @@ from geo_companion.contracts import (
     LessonPublic,
     PracticeAnswerResult,
     PracticeAnswerSubmission,
+    PracticeClue,
     PracticeRoundPublic,
     QuizAnswerResult,
     QuizAnswerSubmission,
     StudyGrade,
     StudyProgress,
+    StudyReview,
 )
 from geo_companion.learning import LearningService
 from geo_companion.paths import application_data_dir
@@ -123,6 +125,18 @@ async def next_practice_round() -> PracticeRoundPublic:
     return service().next_round()
 
 
+@app.get("/api/v1/practice/rounds/{round_id}/clue", response_model=PracticeClue)
+async def get_practice_clue(round_id: str) -> PracticeClue:
+    """Reveal only the optional authored clue; this never releases the answer."""
+    try:
+        return service().clue(round_id)
+    except KeyError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Practice round '{round_id}' was not found.",
+        ) from error
+
+
 @app.post("/api/v1/practice/rounds/{round_id}/answers", response_model=PracticeAnswerResult)
 async def submit_practice_answer(
     round_id: str, submission: PracticeAnswerSubmission
@@ -140,7 +154,13 @@ async def submit_practice_answer(
 @app.post("/api/v1/feedback", status_code=status.HTTP_204_NO_CONTENT)
 async def submit_feedback(feedback: Feedback) -> None:
     """Persist local feedback; reports remain separate from verified source truth."""
-    service().record_feedback(feedback)
+    try:
+        service().record_feedback(feedback)
+    except KeyError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="The feedback attempt was not found for this learner.",
+        ) from error
 
 
 @app.get("/api/v1/study/progress/{lesson_id}", response_model=StudyProgress)
@@ -153,6 +173,12 @@ async def get_study_progress(lesson_id: str) -> StudyProgress:
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"No study progress exists for lesson '{lesson_id}'.",
         ) from error
+
+
+@app.get("/api/v1/study/review/next", response_model=StudyReview)
+async def next_study_review() -> StudyReview:
+    """Return the next locally scheduled item without inventing a review on clean start."""
+    return service().next_review()
 
 
 @app.post("/api/v1/study/grades", response_model=StudyProgress)

@@ -171,6 +171,11 @@
       "Feedback": {
         "additionalProperties": false,
         "properties": {
+          "attempt_id": {
+            "minLength": 1,
+            "title": "Attempt Id",
+            "type": "string"
+          },
           "note": {
             "anyOf": [
               {
@@ -201,6 +206,7 @@
           }
         },
         "required": [
+          "attempt_id",
           "round_id",
           "rating"
         ],
@@ -234,6 +240,17 @@
             },
             "title": "Citations",
             "type": "array"
+          },
+          "diagram_asset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diagram Asset Id"
           },
           "lesson_id": {
             "title": "Lesson Id",
@@ -357,6 +374,16 @@
             "title": "Round Id",
             "type": "string"
           },
+          "study_progress": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StudyProgress"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "submission": {
             "$ref": "#/components/schemas/PracticeAnswerSubmission"
           }
@@ -421,6 +448,26 @@
           }
         },
         "title": "PracticeAnswerSubmission",
+        "type": "object"
+      },
+      "PracticeClue": {
+        "additionalProperties": false,
+        "description": "An optional authored clue, distinct from the hidden answer.",
+        "properties": {
+          "clue": {
+            "title": "Clue",
+            "type": "string"
+          },
+          "round_id": {
+            "title": "Round Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "round_id",
+          "clue"
+        ],
+        "title": "PracticeClue",
         "type": "object"
       },
       "PracticeRoundPublic": {
@@ -562,7 +609,14 @@
             "type": "array"
           },
           "coordinate": {
-            "$ref": "#/components/schemas/Coordinate"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Coordinate"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "country_code": {
             "maxLength": 2,
@@ -578,7 +632,6 @@
         },
         "required": [
           "country_code",
-          "coordinate",
           "explanation",
           "citations",
           "answer_origin"
@@ -650,6 +703,24 @@
           "ease_factor"
         ],
         "title": "StudyProgress",
+        "type": "object"
+      },
+      "StudyReview": {
+        "additionalProperties": false,
+        "description": "The next local review; an empty queue is an expected clean-start state.",
+        "properties": {
+          "progress": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StudyProgress"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "StudyReview",
         "type": "object"
       },
       "ValidationError": {
@@ -954,6 +1025,46 @@
         "summary": "Submit Practice Answer"
       }
     },
+    "/api/v1/practice/rounds/{round_id}/clue": {
+      "get": {
+        "description": "Reveal only the optional authored clue; this never releases the answer.",
+        "operationId": "get_practice_clue_api_v1_practice_rounds__round_id__clue_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "round_id",
+            "required": true,
+            "schema": {
+              "title": "Round Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PracticeClue"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Practice Clue"
+      }
+    },
     "/api/v1/study/grades": {
       "post": {
         "description": "Apply standard SM-2 to the local review queue.",
@@ -1031,6 +1142,25 @@
           }
         },
         "summary": "Get Study Progress"
+      }
+    },
+    "/api/v1/study/review/next": {
+      "get": {
+        "description": "Return the next locally scheduled item without inventing a review on clean start.",
+        "operationId": "next_study_review_api_v1_study_review_next_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudyReview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Next Study Review"
       }
     }
   }

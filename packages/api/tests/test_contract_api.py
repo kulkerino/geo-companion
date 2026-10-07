@@ -53,14 +53,19 @@ def test_openapi_advertises_versioned_learning_contracts() -> None:
     assert "/api/v1/study/progress/{lesson_id}" in paths
 
 
-def test_feedback_persists_locally() -> None:
+def test_feedback_rejects_an_unknown_revealed_attempt() -> None:
     from geo_companion.main import app
 
     response = request(
         app,
         "POST",
         "/api/v1/feedback",
-        {"round_id": "starter-diagram-01", "rating": 3, "note": "Useful explanation."},
+        {
+            "attempt_id": "missing-attempt",
+            "round_id": "starter-diagram-01",
+            "rating": 3,
+            "note": "Useful explanation.",
+        },
     )
 
-    assert response.status_code == 204
+    assert response.status_code == 404

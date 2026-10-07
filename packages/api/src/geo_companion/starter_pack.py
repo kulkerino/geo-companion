@@ -15,7 +15,6 @@ from geo_companion.contracts import (
     Attribution,
     Citation,
     ContentPack,
-    Coordinate,
     Lesson,
     PracticeRound,
     QuizItem,
@@ -54,7 +53,7 @@ def convention_citation(claim: str) -> Citation:
         accessed_on=TODAY,
         reviewed_on=TODAY,
         geographic_scope="International",
-        rights_status=RightsStatus.CLEARED,
+        rights_status=RightsStatus.REFERENCE_ONLY,
     )
 
 
@@ -66,7 +65,13 @@ LESSONS = (
     Lesson(
         lesson_id="road-sign-shapes",
         title="Road-sign shapes are clues, not verdicts",
-        body="Compare shape, border, and symbol together. A single sign rarely proves a country.",
+        body=(
+            "Start with the whole sign system: shape, border, colour, symbol, and nearby language. "
+            "The diagram compares a warning triangle with a service panel. A triangle can support a "
+            "hypothesis, but it is shared across many countries, so it is never a country verdict. "
+            "Counterexample: identical warning geometry appears across multiple Convention sign systems."
+        ),
+        diagram_asset_id="diagram-01.svg",
         citations=(convention_citation("standardised road-sign categories"),),
         quiz_items=(
             QuizItem(
@@ -82,7 +87,13 @@ LESSONS = (
     Lesson(
         lesson_id="road-markings",
         title="Read the road, then test the pattern",
-        body="Line colour, edge treatment, and driving side are comparative clues. Record uncertainty when evidence conflicts.",
+        body=(
+            "Road paint is most useful as a comparison exercise. Notice the centre line, the edge line, "
+            "and whether a sign, language clue, or lane direction agrees. Record uncertainty when clues "
+            "conflict: resurfacing and local road works make markings weak evidence. Compare at least two "
+            "independent observations before choosing a country."
+        ),
+        diagram_asset_id="diagram-04.svg",
         citations=(convention_citation("road-marking conventions"),),
         quiz_items=(
             QuizItem(
@@ -98,7 +109,13 @@ LESSONS = (
     Lesson(
         lesson_id="clue-confidence",
         title="Confidence is part of the answer",
-        body="Use skip or uncertain when the evidence is weak. Honest uncertainty produces a better review queue than invented certainty.",
+        body=(
+            "Confidence is evidence too. Mark a guess uncertain when the clue could fit multiple countries, "
+            "and skip when there is no defensible hypothesis. The comparison diagram deliberately includes "
+            "an ambiguous exit word: a language fragment may narrow a region without identifying one country. "
+            "Honest uncertainty creates a useful review queue instead of invented precision."
+        ),
+        diagram_asset_id="diagram-10.svg",
         citations=(original_citation("Original confidence lesson", "Global"),),
         quiz_items=(
             QuizItem(
@@ -114,9 +131,7 @@ LESSONS = (
 )
 
 
-def _round(
-    index: int, country_code: str, latitude: float, longitude: float, country: str
-) -> PracticeRound:
+def _round(index: int, country_code: str, country: str, clue: str) -> PracticeRound:
     asset_id = f"diagram-{index:02d}.svg"
     return PracticeRound(
         round_id=f"starter-diagram-{index:02d}",
@@ -124,27 +139,56 @@ def _round(
         asset_attribution=original_attribution(
             f"{asset_id}: original educational diagram fixture", "Synthetic classroom scene"
         ),
+        clue=clue,
         answer=SourceTruthAnswer(
             country_code=country_code,
-            coordinate=Coordinate(latitude=latitude, longitude=longitude),
-            explanation=f"Verified answer: {country}. This is a labelled original educational fixture, not real-world imagery.",
+            explanation=(
+                f"Teaching target: {country}. This is an authored country-clue diagram, "
+                "not a photographed or geolocated scene."
+            ),
             citations=(original_citation(f"{asset_id} answer annotation", country),),
-            answer_origin=AnswerOrigin.SOURCE_TRUTH,
+            answer_origin=AnswerOrigin.AUTHORED,
         ),
     )
 
 
 PRACTICE_ROUNDS = (
-    _round(1, "SK", 48.15, 17.11, "Slovakia"),
-    _round(2, "CZ", 50.08, 14.43, "Czechia"),
-    _round(3, "AT", 48.21, 16.37, "Austria"),
-    _round(4, "HU", 47.50, 19.04, "Hungary"),
-    _round(5, "PL", 52.23, 21.01, "Poland"),
-    _round(6, "SI", 46.06, 14.51, "Slovenia"),
-    _round(7, "HR", 45.81, 15.98, "Croatia"),
-    _round(8, "RO", 44.43, 26.10, "Romania"),
-    _round(9, "DE", 52.52, 13.41, "Germany"),
-    _round(10, "IT", 41.90, 12.50, "Italy"),
+    _round(
+        1, "SK", "Slovakia", "Compare the Slovak-looking exit word with neighbouring languages."
+    ),
+    _round(
+        2, "CZ", "Czechia", "Check the Czech diacritic before using the word as a country clue."
+    ),
+    _round(3, "AT", "Austria", "German is shared: the diagram needs a second road-system clue."),
+    _round(
+        4,
+        "HU",
+        "Hungary",
+        "The accented Hungarian word is the strongest clue in this authored example.",
+    ),
+    _round(5, "PL", "Poland", "The Polish warning word contains a distinctive letter pattern."),
+    _round(
+        6, "SI", "Slovenia", "Treat the Slovenian exit word as a language clue, not a location."
+    ),
+    _round(7, "HR", "Croatia", "Compare this South Slavic exit word with the Slovenian version."),
+    _round(
+        8,
+        "RO",
+        "Romania",
+        "The Romanian exit word is presented as an authored language comparison.",
+    ),
+    _round(
+        9,
+        "DE",
+        "Germany",
+        "German-language signage alone cannot distinguish every German-speaking country.",
+    ),
+    _round(
+        10,
+        "IT",
+        "Italy",
+        "The Italian exit word is a clue that should be cross-checked with road markings.",
+    ),
 )
 
 STARTER_PACK = ContentPack(

@@ -76,6 +76,7 @@ class Lesson(ContractModel):
     lesson_id: str = Field(min_length=1)
     title: str = Field(min_length=1)
     body: str = Field(min_length=1)
+    diagram_asset_id: str | None = None
     citations: tuple[Citation, ...] = Field(min_length=1)
     quiz_items: tuple[QuizItem, ...]
 
@@ -94,6 +95,7 @@ class LessonPublic(ContractModel):
     lesson_id: str
     title: str
     body: str
+    diagram_asset_id: str | None = None
     citations: tuple[Citation, ...]
     quiz_items: tuple[QuizItemPublic, ...]
 
@@ -120,7 +122,7 @@ class SourceTruthAnswer(ContractModel):
     """Pack-authored ground truth; never derived from learner or model activity."""
 
     country_code: str = Field(min_length=2, max_length=2)
-    coordinate: Coordinate
+    coordinate: Coordinate | None = None
     explanation: str = Field(min_length=1)
     citations: tuple[Citation, ...] = Field(min_length=1)
     answer_origin: Literal[AnswerOrigin.SOURCE_TRUTH, AnswerOrigin.AUTHORED]
@@ -130,6 +132,7 @@ class PracticeRound(ContractModel):
     round_id: str = Field(min_length=1)
     asset_id: str = Field(min_length=1)
     asset_attribution: Attribution
+    clue: str = Field(default="No authored clue is available for this round.", min_length=1)
     answer: SourceTruthAnswer
 
 
@@ -149,6 +152,13 @@ class PracticeRoundPublic(ContractModel):
         )
 
 
+class PracticeClue(ContractModel):
+    """An optional authored clue, distinct from the hidden answer."""
+
+    round_id: str
+    clue: str
+
+
 class PracticeAnswerSubmission(ContractModel):
     country_code: str | None = Field(default=None, min_length=2, max_length=2)
     region_code: str | None = Field(default=None, min_length=1)
@@ -163,8 +173,8 @@ class PracticeAnswerSubmission(ContractModel):
             if any(field is not None for field in guess_fields):
                 msg = "Skipped practice answers cannot include country, region, or coordinates."
                 raise ValueError(msg)
-        elif self.country_code is None or self.coordinate is None:
-            msg = "Submitted practice answers require country_code and coordinate."
+        elif self.country_code is None:
+            msg = "Submitted practice answers require a country_code."
             raise ValueError(msg)
         return self
 
@@ -180,6 +190,7 @@ class PracticeAnswerResult(PracticeReveal):
     attempt_id: str
     is_correct: bool
     submission: PracticeAnswerSubmission
+    study_progress: StudyProgress | None = None
 
 
 class UserCorrection(ContractModel):
@@ -205,6 +216,7 @@ class ModelPrediction(ContractModel):
 
 
 class Feedback(ContractModel):
+    attempt_id: str = Field(min_length=1)
     round_id: str = Field(min_length=1)
     rating: int = Field(ge=1, le=5)
     note: str | None = Field(default=None, min_length=1)
@@ -228,6 +240,12 @@ class StudyGrade(ContractModel):
     lesson_id: str = Field(min_length=1)
     quality: int = Field(ge=0, le=5)
     reviewed_at: datetime
+
+
+class StudyReview(ContractModel):
+    """The next local review; an empty queue is an expected clean-start state."""
+
+    progress: StudyProgress | None = None
 
 
 class ModelManifest(ContractModel):
@@ -298,7 +316,21 @@ class ContentPack(ContractModel):
         return (*lesson_attributions, *round_attributions)
 
     def is_publication_ready(self) -> bool:
-        return all(item.rights_status is RightsStatus.CLEARED for item in self._attributions())
+        """Only redistributed pack assets need cleared reuse rights.
+
+        Citations may be reference-only: their URLs document a factual claim but do not grant
+        permission to copy the source itself into the pack.
+        """
+        return (
+            all(
+                round_.asset_attribution.rights_status is RightsStatus.CLEARED
+                for round_ in self.practice_rounds
+            )
+            and all(
+                item.rights_status is not RightsStatus.QUARANTINED
+                for item in self._attributions()
+            )
+        )
 
     def require_publication_ready(self) -> None:
         if not self.is_publication_ready():
