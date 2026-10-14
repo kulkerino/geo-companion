@@ -4,7 +4,8 @@ The current state of the project at a glance. Update this file in the same commi
 work that changes it; detailed evidence for each session goes in [`journal/`](journal/).
 
 **Last updated:** 2026-10-14
-**Branch:** `feature/initial-platform` (no GitHub remote yet; nothing has been pushed)
+**Branch:** `feature/initial-platform`
+**GitHub:** [kulkerino/geo-companion](https://github.com/kulkerino/geo-companion) (private), remote `origin`; `main` and `feature/initial-platform` pushed
 **Next step:** connect the app to a dummy model. Waiting for kulo to start it.
 
 ## Task status
@@ -42,10 +43,13 @@ The full plan is in
 | 2026-10-14 | Knowledge lessons dropped; Task 3 is Open Practice only | plan Task 3 note, Task 3 journal |
 | 2026-10-14 | Independent review only at big milestones; a self-review pass otherwise | Task 3 journal |
 | 2026-10-14 | Project moved to `~/Documents/geolearn` (the history moved with it) | this file |
+| 2026-10-14 | Private GitHub repo `kulkerino/geo-companion` created as `origin` | journal 2026-10-14 move entry |
 
 ## Known gaps
 
-- No GitHub remote or authentication.
+- CI has not run on GitHub yet: the workflow runs on pull requests and on pushes to `main`, and
+  `main` only holds the plan commit. Opening a pull request from `feature/initial-platform`, or
+  merging it, will run CI.
 - The starter pack teaches one deliberately easy cue (a named city) and contains no real
   imagery.
 - Storage cleanup for Task 4: the database tables from the original migration are still

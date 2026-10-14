@@ -30,6 +30,19 @@ make sure that progress and work are documented there.
 - Limitations: `pnpm` and Node 24 are still only available from the Codex runtime
   directory, not on the system PATH.
 
+## GitHub setup (same day)
+
+- Git identity for this repository was set to kulo <adamkovc80@gmail.com> (`git config`, repo-local).
+  The earlier commit `9b67f00` was made as "Claude (for kulo)" before an identity existed.
+- kulo installed `github-cli` and ran `gh auth login` (account `kulkerino`, HTTPS, token kept in
+  the system keyring).
+- `gh repo create geo-companion --private --source . --remote origin`, then
+  `git push -u origin main` and `git push -u origin feature/initial-platform`. `gh repo view`
+  reports visibility `PRIVATE` with default branch `main`. The repository audit passed before
+  the push.
+- `gh run list` showed no runs: `.github/workflows/ci.yml` runs on pull requests and on pushes to
+  `main`, and `main` only contains `177f9f4` (the plan).
+
 ## Follow-up
 
 Connect the app to a dummy model once kulo says to start.
