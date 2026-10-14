@@ -1,0 +1,1056 @@
+{
+  "components": {
+    "schemas": {
+      "Attribution": {
+        "additionalProperties": false,
+        "description": "Rights and provenance required for every published educational claim or asset.",
+        "properties": {
+          "accessed_on": {
+            "format": "date",
+            "title": "Accessed On",
+            "type": "string"
+          },
+          "attribution_text": {
+            "minLength": 1,
+            "title": "Attribution Text",
+            "type": "string"
+          },
+          "creator": {
+            "minLength": 1,
+            "title": "Creator",
+            "type": "string"
+          },
+          "geographic_scope": {
+            "minLength": 1,
+            "title": "Geographic Scope",
+            "type": "string"
+          },
+          "license_name": {
+            "minLength": 1,
+            "title": "License Name",
+            "type": "string"
+          },
+          "license_url": {
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "title": "License Url",
+            "type": "string"
+          },
+          "reviewed_on": {
+            "format": "date",
+            "title": "Reviewed On",
+            "type": "string"
+          },
+          "rights_status": {
+            "$ref": "#/components/schemas/RightsStatus"
+          },
+          "source_title": {
+            "minLength": 1,
+            "title": "Source Title",
+            "type": "string"
+          },
+          "source_url": {
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "title": "Source Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_title",
+          "source_url",
+          "creator",
+          "license_name",
+          "license_url",
+          "attribution_text",
+          "accessed_on",
+          "reviewed_on",
+          "geographic_scope",
+          "rights_status"
+        ],
+        "title": "Attribution",
+        "type": "object"
+      },
+      "Citation": {
+        "additionalProperties": false,
+        "description": "A citation is an attribution attached to a claim.",
+        "properties": {
+          "accessed_on": {
+            "format": "date",
+            "title": "Accessed On",
+            "type": "string"
+          },
+          "attribution_text": {
+            "minLength": 1,
+            "title": "Attribution Text",
+            "type": "string"
+          },
+          "creator": {
+            "minLength": 1,
+            "title": "Creator",
+            "type": "string"
+          },
+          "geographic_scope": {
+            "minLength": 1,
+            "title": "Geographic Scope",
+            "type": "string"
+          },
+          "license_name": {
+            "minLength": 1,
+            "title": "License Name",
+            "type": "string"
+          },
+          "license_url": {
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "title": "License Url",
+            "type": "string"
+          },
+          "reviewed_on": {
+            "format": "date",
+            "title": "Reviewed On",
+            "type": "string"
+          },
+          "rights_status": {
+            "$ref": "#/components/schemas/RightsStatus"
+          },
+          "source_title": {
+            "minLength": 1,
+            "title": "Source Title",
+            "type": "string"
+          },
+          "source_url": {
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "title": "Source Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_title",
+          "source_url",
+          "creator",
+          "license_name",
+          "license_url",
+          "attribution_text",
+          "accessed_on",
+          "reviewed_on",
+          "geographic_scope",
+          "rights_status"
+        ],
+        "title": "Citation",
+        "type": "object"
+      },
+      "Coordinate": {
+        "additionalProperties": false,
+        "properties": {
+          "latitude": {
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Latitude",
+            "type": "number"
+          },
+          "longitude": {
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Longitude",
+            "type": "number"
+          }
+        },
+        "required": [
+          "latitude",
+          "longitude"
+        ],
+        "title": "Coordinate",
+        "type": "object"
+      },
+      "Feedback": {
+        "additionalProperties": false,
+        "properties": {
+          "attempt_id": {
+            "minLength": 1,
+            "title": "Attempt Id",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "rating": {
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Rating",
+            "type": "integer"
+          },
+          "reported_issue": {
+            "default": false,
+            "title": "Reported Issue",
+            "type": "boolean"
+          },
+          "round_id": {
+            "minLength": 1,
+            "title": "Round Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "attempt_id",
+          "round_id",
+          "rating"
+        ],
+        "title": "Feedback",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "ModelCandidate": {
+        "additionalProperties": false,
+        "properties": {
+          "confidence": {
+            "exclusiveMinimum": 0.0,
+            "maximum": 1.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "country_code": {
+            "pattern": "^[A-Z]{2}$",
+            "title": "Country Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "country_code",
+          "confidence"
+        ],
+        "title": "ModelCandidate",
+        "type": "object"
+      },
+      "ModelInfo": {
+        "additionalProperties": false,
+        "description": "Identity of the local prediction provider; learning never requires one.",
+        "properties": {
+          "description": {
+            "minLength": 1,
+            "title": "Description",
+            "type": "string"
+          },
+          "is_placeholder": {
+            "title": "Is Placeholder",
+            "type": "boolean"
+          },
+          "model_id": {
+            "minLength": 1,
+            "title": "Model Id",
+            "type": "string"
+          },
+          "required_for_learning": {
+            "const": false,
+            "default": false,
+            "title": "Required For Learning",
+            "type": "boolean"
+          },
+          "runtime": {
+            "enum": [
+              "dummy",
+              "onnx",
+              "pytorch"
+            ],
+            "title": "Runtime",
+            "type": "string"
+          },
+          "version": {
+            "pattern": "^\\d+\\.\\d+\\.\\d+$",
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "model_id",
+          "version",
+          "runtime",
+          "is_placeholder",
+          "description"
+        ],
+        "title": "ModelInfo",
+        "type": "object"
+      },
+      "ModelPredictionResult": {
+        "additionalProperties": false,
+        "description": "A post-answer model opinion for one attempt; never source truth and never a hint.",
+        "properties": {
+          "abstained": {
+            "title": "Abstained",
+            "type": "boolean"
+          },
+          "attempt_id": {
+            "minLength": 1,
+            "title": "Attempt Id",
+            "type": "string"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/ModelCandidate"
+            },
+            "maxItems": 5,
+            "title": "Candidates",
+            "type": "array"
+          },
+          "model": {
+            "$ref": "#/components/schemas/ModelInfo"
+          },
+          "origin": {
+            "const": "model_prediction",
+            "default": "model_prediction",
+            "title": "Origin",
+            "type": "string"
+          },
+          "round_id": {
+            "minLength": 1,
+            "title": "Round Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "attempt_id",
+          "round_id",
+          "model",
+          "candidates",
+          "abstained"
+        ],
+        "title": "ModelPredictionResult",
+        "type": "object"
+      },
+      "ModelStatus": {
+        "additionalProperties": false,
+        "description": "Which provider is enabled; ``active`` is null when the app runs without a model.",
+        "properties": {
+          "active": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModelInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "ModelStatus",
+        "type": "object"
+      },
+      "PackSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "content_hash": {
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "pack_id": {
+            "title": "Pack Id",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "pack_id",
+          "version",
+          "content_hash"
+        ],
+        "title": "PackSummary",
+        "type": "object"
+      },
+      "PacksResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "packs": {
+            "items": {
+              "$ref": "#/components/schemas/PackSummary"
+            },
+            "title": "Packs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "packs"
+        ],
+        "title": "PacksResponse",
+        "type": "object"
+      },
+      "PracticeAnswerResult": {
+        "additionalProperties": false,
+        "description": "Post-submission reveal with deterministic scoring and a local attempt identity.",
+        "properties": {
+          "answer": {
+            "$ref": "#/components/schemas/SourceTruthAnswer"
+          },
+          "attempt_id": {
+            "title": "Attempt Id",
+            "type": "string"
+          },
+          "is_correct": {
+            "title": "Is Correct",
+            "type": "boolean"
+          },
+          "round_id": {
+            "title": "Round Id",
+            "type": "string"
+          },
+          "study_progress": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StudyProgress"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "submission": {
+            "$ref": "#/components/schemas/PracticeAnswerSubmission"
+          }
+        },
+        "required": [
+          "round_id",
+          "answer",
+          "attempt_id",
+          "is_correct",
+          "submission"
+        ],
+        "title": "PracticeAnswerResult",
+        "type": "object"
+      },
+      "PracticeAnswerSubmission": {
+        "additionalProperties": false,
+        "properties": {
+          "coordinate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Coordinate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "country_code": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country Code"
+          },
+          "region_code": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region Code"
+          },
+          "skipped": {
+            "default": false,
+            "title": "Skipped",
+            "type": "boolean"
+          },
+          "uncertain": {
+            "default": false,
+            "title": "Uncertain",
+            "type": "boolean"
+          }
+        },
+        "title": "PracticeAnswerSubmission",
+        "type": "object"
+      },
+      "PracticeClue": {
+        "additionalProperties": false,
+        "description": "An optional authored clue, distinct from the hidden answer.",
+        "properties": {
+          "clue": {
+            "title": "Clue",
+            "type": "string"
+          },
+          "round_id": {
+            "title": "Round Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "round_id",
+          "clue"
+        ],
+        "title": "PracticeClue",
+        "type": "object"
+      },
+      "PracticeRoundPublic": {
+        "additionalProperties": false,
+        "description": "Pre-submission contract deliberately omitting both answer and coordinates.",
+        "properties": {
+          "asset_attribution": {
+            "$ref": "#/components/schemas/Attribution"
+          },
+          "asset_description": {
+            "title": "Asset Description",
+            "type": "string"
+          },
+          "asset_id": {
+            "title": "Asset Id",
+            "type": "string"
+          },
+          "round_id": {
+            "title": "Round Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "round_id",
+          "asset_id",
+          "asset_attribution",
+          "asset_description"
+        ],
+        "title": "PracticeRoundPublic",
+        "type": "object"
+      },
+      "RightsStatus": {
+        "enum": [
+          "cleared",
+          "reference-only",
+          "quarantined"
+        ],
+        "title": "RightsStatus",
+        "type": "string"
+      },
+      "SourceTruthAnswer": {
+        "additionalProperties": false,
+        "description": "Pack-authored ground truth; never derived from learner or model activity.",
+        "properties": {
+          "answer_origin": {
+            "enum": [
+              "source_truth",
+              "authored"
+            ],
+            "title": "Answer Origin",
+            "type": "string"
+          },
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/Citation"
+            },
+            "minItems": 1,
+            "title": "Citations",
+            "type": "array"
+          },
+          "coordinate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Coordinate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "country_code": {
+            "maxLength": 2,
+            "minLength": 2,
+            "title": "Country Code",
+            "type": "string"
+          },
+          "explanation": {
+            "minLength": 1,
+            "title": "Explanation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "country_code",
+          "explanation",
+          "citations",
+          "answer_origin"
+        ],
+        "title": "SourceTruthAnswer",
+        "type": "object"
+      },
+      "StudyProgress": {
+        "additionalProperties": false,
+        "description": "SM-2 review state for one practice round, derived only from local attempts.",
+        "properties": {
+          "ease_factor": {
+            "minimum": 1.3,
+            "title": "Ease Factor",
+            "type": "number"
+          },
+          "interval_days": {
+            "minimum": 0.0,
+            "title": "Interval Days",
+            "type": "integer"
+          },
+          "last_reviewed_on": {
+            "format": "date",
+            "title": "Last Reviewed On",
+            "type": "string"
+          },
+          "next_review_on": {
+            "description": "The due date the review queue is ordered by.",
+            "format": "date",
+            "readOnly": true,
+            "title": "Next Review On",
+            "type": "string"
+          },
+          "repetitions": {
+            "minimum": 0.0,
+            "title": "Repetitions",
+            "type": "integer"
+          },
+          "round_id": {
+            "minLength": 1,
+            "title": "Round Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "round_id",
+          "repetitions",
+          "interval_days",
+          "ease_factor",
+          "next_review_on"
+        ],
+        "title": "StudyProgress",
+        "type": "object"
+      },
+      "StudyReview": {
+        "additionalProperties": false,
+        "description": "The next local review; an empty queue is an expected clean-start state.",
+        "properties": {
+          "progress": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StudyProgress"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "StudyReview",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Geo Companion API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/feedback": {
+      "post": {
+        "description": "Persist local feedback; reports remain separate from verified source truth.",
+        "operationId": "submit_feedback_api_v1_feedback_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Feedback"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Submit Feedback"
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "description": "Report that the local API process is accepting requests.",
+        "operationId": "health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Health Api V1 Health Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health"
+      }
+    },
+    "/api/v1/models": {
+      "get": {
+        "description": "Report the optional local model; ``active`` is null when none is enabled.",
+        "operationId": "model_status_api_v1_models_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Model Status"
+      }
+    },
+    "/api/v1/packs": {
+      "get": {
+        "description": "Expose the immutable bundled starter pack without a lifecycle/install flow.",
+        "operationId": "list_packs_api_v1_packs_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PacksResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Packs"
+      }
+    },
+    "/api/v1/practice/attempts/{attempt_id}/model-prediction": {
+      "get": {
+        "description": "Return the model's post-answer opinion; it requires an answered or skipped attempt.",
+        "operationId": "get_model_prediction_api_v1_practice_attempts__attempt_id__model_prediction_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attempt_id",
+            "required": true,
+            "schema": {
+              "title": "Attempt Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelPredictionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Model Prediction"
+      }
+    },
+    "/api/v1/practice/rounds/next": {
+      "get": {
+        "description": "Serve an original diagram only; answers never leave this route before submission.",
+        "operationId": "next_practice_round_api_v1_practice_rounds_next_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PracticeRoundPublic"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Next Practice Round"
+      }
+    },
+    "/api/v1/practice/rounds/{round_id}": {
+      "get": {
+        "description": "Reopen one round's public payload, e.g. for a scheduled review; no answer is included.",
+        "operationId": "get_practice_round_api_v1_practice_rounds__round_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "round_id",
+            "required": true,
+            "schema": {
+              "title": "Round Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PracticeRoundPublic"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Practice Round"
+      }
+    },
+    "/api/v1/practice/rounds/{round_id}/answers": {
+      "post": {
+        "description": "Persist the pseudonymous attempt and its review schedule, then reveal the answer.",
+        "operationId": "submit_practice_answer_api_v1_practice_rounds__round_id__answers_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "round_id",
+            "required": true,
+            "schema": {
+              "title": "Round Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PracticeAnswerSubmission"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PracticeAnswerResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Submit Practice Answer"
+      }
+    },
+    "/api/v1/practice/rounds/{round_id}/clue": {
+      "get": {
+        "description": "Reveal only the optional authored clue; this never releases the answer.",
+        "operationId": "get_practice_clue_api_v1_practice_rounds__round_id__clue_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "round_id",
+            "required": true,
+            "schema": {
+              "title": "Round Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PracticeClue"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Practice Clue"
+      }
+    },
+    "/api/v1/study/progress/{round_id}": {
+      "get": {
+        "description": "Return persisted pseudonymous SM-2 state for one practice round.",
+        "operationId": "get_study_progress_api_v1_study_progress__round_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "round_id",
+            "required": true,
+            "schema": {
+              "title": "Round Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudyProgress"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Study Progress"
+      }
+    },
+    "/api/v1/study/review/next": {
+      "get": {
+        "description": "Return the earliest-due local review without inventing one on clean start.",
+        "operationId": "next_study_review_api_v1_study_review_next_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudyReview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Next Study Review"
+      }
+    }
+  }
+}

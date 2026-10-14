@@ -1,0 +1,11 @@
+{
+  "name": "geo-companion",
+  "private": true,
+  "packageManager": "pnpm@11.19.0",
+  "scripts": {
+    "test:web": "pnpm --dir apps/web test",
+    "lint:web": "pnpm --dir apps/web lint",
+    "typecheck:web": "pnpm --dir apps/web typecheck",
+    "build:web": "pnpm --dir apps/web build"
+  }
+}
