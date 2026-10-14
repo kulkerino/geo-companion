@@ -44,24 +44,6 @@ export interface HTTPValidationError {
   detail?: Array<ValidationError>;
 }
 
-export interface LessonPublic {
-  lesson_id: string;
-  title: string;
-  body: string;
-  diagram_asset_id?: string | null;
-  citations: Array<Citation>;
-  quiz_items: Array<QuizItemPublic>;
-}
-
-export interface LessonSummary {
-  lesson_id: string;
-  title: string;
-}
-
-export interface LessonsResponse {
-  lessons: Array<LessonSummary>;
-}
-
 export interface PackSummary {
   pack_id: string;
   version: string;
@@ -98,25 +80,7 @@ export interface PracticeRoundPublic {
   round_id: string;
   asset_id: string;
   asset_attribution: Attribution;
-}
-
-export interface QuizAnswerResult {
-  lesson_id: string;
-  quiz_id: string;
-  selected_choice: string;
-  is_correct: boolean;
-  explanation: string;
-  citations: Array<Citation>;
-}
-
-export interface QuizAnswerSubmission {
-  selected_choice: string;
-}
-
-export interface QuizItemPublic {
-  quiz_id: string;
-  prompt: string;
-  choices: Array<string>;
+  asset_description: string;
 }
 
 export type RightsStatus = "cleared" | "reference-only" | "quarantined";
@@ -129,18 +93,13 @@ export interface SourceTruthAnswer {
   answer_origin: "source_truth" | "authored";
 }
 
-export interface StudyGrade {
-  lesson_id: string;
-  quality: number;
-  reviewed_at: string;
-}
-
 export interface StudyProgress {
-  lesson_id: string;
+  round_id: string;
   repetitions: number;
   interval_days: number;
   ease_factor: number;
   last_reviewed_on?: string;
+  next_review_on: string;
 }
 
 export interface StudyReview {
@@ -191,24 +150,6 @@ export class GeoCompanionApiClient {
     );
   }
 
-  async list_lessons_api_v1_lessons_get(): Promise<LessonsResponse> {
-    return this.request<LessonsResponse>(
-      "GET", "/api/v1/lessons", {}, undefined,
-    );
-  }
-
-  async get_lesson_api_v1_lessons__lesson_id__get(lesson_id: string): Promise<LessonPublic> {
-    return this.request<LessonPublic>(
-      "GET", "/api/v1/lessons/{lesson_id}", { "lesson_id": String(lesson_id) }, undefined,
-    );
-  }
-
-  async submit_quiz_answer_api_v1_lessons__lesson_id__quizzes__quiz_id__answers_post(lesson_id: string, quiz_id: string, body: QuizAnswerSubmission): Promise<QuizAnswerResult> {
-    return this.request<QuizAnswerResult>(
-      "POST", "/api/v1/lessons/{lesson_id}/quizzes/{quiz_id}/answers", { "lesson_id": String(lesson_id), "quiz_id": String(quiz_id) }, body,
-    );
-  }
-
   async list_packs_api_v1_packs_get(): Promise<PacksResponse> {
     return this.request<PacksResponse>(
       "GET", "/api/v1/packs", {}, undefined,
@@ -218,6 +159,12 @@ export class GeoCompanionApiClient {
   async next_practice_round_api_v1_practice_rounds_next_get(): Promise<PracticeRoundPublic> {
     return this.request<PracticeRoundPublic>(
       "GET", "/api/v1/practice/rounds/next", {}, undefined,
+    );
+  }
+
+  async get_practice_round_api_v1_practice_rounds__round_id__get(round_id: string): Promise<PracticeRoundPublic> {
+    return this.request<PracticeRoundPublic>(
+      "GET", "/api/v1/practice/rounds/{round_id}", { "round_id": String(round_id) }, undefined,
     );
   }
 
@@ -233,15 +180,9 @@ export class GeoCompanionApiClient {
     );
   }
 
-  async record_study_grade_api_v1_study_grades_post(body: StudyGrade): Promise<StudyProgress> {
+  async get_study_progress_api_v1_study_progress__round_id__get(round_id: string): Promise<StudyProgress> {
     return this.request<StudyProgress>(
-      "POST", "/api/v1/study/grades", {}, body,
-    );
-  }
-
-  async get_study_progress_api_v1_study_progress__lesson_id__get(lesson_id: string): Promise<StudyProgress> {
-    return this.request<StudyProgress>(
-      "GET", "/api/v1/study/progress/{lesson_id}", { "lesson_id": String(lesson_id) }, undefined,
+      "GET", "/api/v1/study/progress/{round_id}", { "round_id": String(round_id) }, undefined,
     );
   }
 

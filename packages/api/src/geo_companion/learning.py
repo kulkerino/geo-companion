@@ -1,26 +1,32 @@
-"""Local deterministic learning loop backed by SQLite; it makes no network calls."""
-# ruff: noqa: E501
+"""Local deterministic Open Practice loop backed by SQLite; it makes no network calls."""
 
 from __future__ import annotations
 
 import sqlite3
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 
 from geo_companion.contracts import (
     Feedback,
-    LessonPublic,
     PracticeAnswerResult,
     PracticeAnswerSubmission,
     PracticeClue,
+    PracticeRound,
     PracticeRoundPublic,
-    QuizAnswerResult,
-    QuizItemPublic,
     StudyProgress,
     StudyReview,
 )
-from geo_companion.starter_pack import LESSONS, PRACTICE_ROUNDS
+from geo_companion.starter_pack import PRACTICE_ROUNDS
+
+# SM-2 quality per practice outcome. Uncertainty on a correct answer lowers the quality so the
+# round's ease drops and later intervals grow more slowly than for a confident correct answer.
+QUALITY_CONFIDENT_CORRECT = 4
+QUALITY_UNCERTAIN_CORRECT = 3
+QUALITY_INCORRECT = 2
+QUALITY_SKIPPED = 1
 
 
 class LearningService:
@@ -33,20 +39,25 @@ class LearningService:
         self.database_path.parent.mkdir(parents=True, exist_ok=True)
         self._initialize()
 
-    def _connect(self) -> sqlite3.Connection:
+    @contextmanager
+    def _connect(self) -> Iterator[sqlite3.Connection]:
         connection = sqlite3.connect(self.database_path)
         connection.row_factory = sqlite3.Row
-        return connection
+        try:
+            with connection:
+                yield connection
+        finally:
+            connection.close()
 
     def _initialize(self) -> None:
         with self._connect() as connection:
             connection.executescript(
                 """
-                CREATE TABLE IF NOT EXISTS learner_study_progress (
-                    learner_id TEXT NOT NULL, lesson_id TEXT NOT NULL,
+                CREATE TABLE IF NOT EXISTS learner_review_schedule (
+                    learner_id TEXT NOT NULL, round_id TEXT NOT NULL,
                     repetitions INTEGER NOT NULL, interval_days INTEGER NOT NULL,
                     ease_factor REAL NOT NULL, last_reviewed_on TEXT NOT NULL,
-                    PRIMARY KEY (learner_id, lesson_id)
+                    PRIMARY KEY (learner_id, round_id)
                 );
                 CREATE TABLE IF NOT EXISTS learner_practice_attempts (
                     attempt_id TEXT PRIMARY KEY, learner_id TEXT NOT NULL, round_id TEXT NOT NULL,
@@ -71,83 +82,48 @@ class LearningService:
                     "ADD COLUMN reported_issue INTEGER NOT NULL DEFAULT 0"
                 )
 
-    def lessons(self) -> tuple[LessonPublic, ...]:
-        return tuple(self._public_lesson(lesson) for lesson in LESSONS)
-
-    def _public_lesson(self, lesson: object) -> LessonPublic:
-        from geo_companion.contracts import Lesson
-
-        assert isinstance(lesson, Lesson)
-        return LessonPublic(
-            lesson_id=lesson.lesson_id,
-            title=lesson.title,
-            body=lesson.body,
-            diagram_asset_id=lesson.diagram_asset_id,
-            citations=lesson.citations,
-            quiz_items=tuple(
-                QuizItemPublic(
-                    quiz_id=item.quiz_id,
-                    prompt=item.prompt,
-                    choices=item.choices,
-                )
-                for item in lesson.quiz_items
-            ),
-        )
-
-    def lesson_public(self, lesson_id: str) -> LessonPublic:
-        for lesson in LESSONS:
-            if lesson.lesson_id == lesson_id:
-                return self._public_lesson(lesson)
-        raise KeyError(lesson_id)
-
-    def answer_quiz(self, lesson_id: str, quiz_id: str, selected_choice: str) -> QuizAnswerResult:
-        lesson = next((item for item in LESSONS if item.lesson_id == lesson_id), None)
-        if lesson is None:
-            raise KeyError(lesson_id)
-        quiz = next((item for item in lesson.quiz_items if item.quiz_id == quiz_id), None)
-        if quiz is None:
-            raise KeyError(quiz_id)
-        if selected_choice not in quiz.choices:
-            raise ValueError("selected_choice must be one of the offered choices")
-        return QuizAnswerResult(
-            lesson_id=lesson_id,
-            quiz_id=quiz_id,
-            selected_choice=selected_choice,
-            is_correct=selected_choice == quiz.correct_choice,
-            explanation=quiz.explanation,
-            citations=quiz.citations,
-        )
-
-    def next_round(self) -> PracticeRoundPublic:
-        with self._connect() as connection:
-            count = connection.execute(
-                "SELECT COUNT(*) FROM learner_practice_attempts WHERE learner_id = ?",
-                (self.learner_id,),
-            ).fetchone()[0]
-        return PracticeRoundPublic.from_round(PRACTICE_ROUNDS[count % len(PRACTICE_ROUNDS)])
-
-    def clue(self, round_id: str) -> PracticeClue:
+    @staticmethod
+    def _round(round_id: str) -> PracticeRound:
         round_ = next((item for item in PRACTICE_ROUNDS if item.round_id == round_id), None)
         if round_ is None:
             raise KeyError(round_id)
-        return PracticeClue(round_id=round_id, clue=round_.clue)
+        return round_
+
+    def next_round(self) -> PracticeRoundPublic:
+        """Advance past the most recently attempted round, so retries never skip a round."""
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT round_id FROM learner_practice_attempts WHERE learner_id = ? "
+                "ORDER BY rowid DESC LIMIT 1",
+                (self.learner_id,),
+            ).fetchone()
+        round_ids = [item.round_id for item in PRACTICE_ROUNDS]
+        if row is None or row["round_id"] not in round_ids:
+            index = 0
+        else:
+            index = (round_ids.index(row["round_id"]) + 1) % len(PRACTICE_ROUNDS)
+        return PracticeRoundPublic.from_round(PRACTICE_ROUNDS[index])
+
+    def round_public(self, round_id: str) -> PracticeRoundPublic:
+        return PracticeRoundPublic.from_round(self._round(round_id))
+
+    def clue(self, round_id: str) -> PracticeClue:
+        return PracticeClue(round_id=round_id, clue=self._round(round_id).clue)
 
     def submit_practice(
         self, round_id: str, submission: PracticeAnswerSubmission
     ) -> PracticeAnswerResult:
-        round_ = next((item for item in PRACTICE_ROUNDS if item.round_id == round_id), None)
-        if round_ is None:
-            raise KeyError(round_id)
+        round_ = self._round(round_id)
         is_correct = (
             not submission.skipped and submission.country_code == round_.answer.country_code
         )
         attempt_id = str(uuid.uuid4())
-        now = datetime.now(UTC).isoformat()
+        submitted_at = datetime.now(UTC)
         with self._connect() as connection:
             connection.execute(
-                """INSERT INTO learner_practice_attempts
-                (attempt_id, learner_id, round_id, submission_json, is_correct, answer_origin, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                "INSERT INTO learner_practice_attempts (attempt_id, learner_id, round_id, "
+                "submission_json, is_correct, answer_origin, created_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (
                     attempt_id,
                     self.learner_id,
@@ -155,18 +131,24 @@ class LearningService:
                     submission.model_dump_json(),
                     int(is_correct),
                     round_.answer.answer_origin.value,
-                    now,
+                    submitted_at.isoformat(),
                 ),
             )
-        quality = 4 if is_correct else (1 if submission.skipped else 2)
-        study_progress = self.grade_lesson(f"practice:{round_id}", quality, datetime.now(UTC))
+        if submission.skipped:
+            quality = QUALITY_SKIPPED
+        elif not is_correct:
+            quality = QUALITY_INCORRECT
+        elif submission.uncertain:
+            quality = QUALITY_UNCERTAIN_CORRECT
+        else:
+            quality = QUALITY_CONFIDENT_CORRECT
         return PracticeAnswerResult(
             round_id=round_id,
             answer=round_.answer,
             attempt_id=attempt_id,
             is_correct=is_correct,
             submission=submission,
-            study_progress=study_progress,
+            study_progress=self.schedule_review(round_id, quality, submitted_at),
         )
 
     def record_feedback(self, feedback: Feedback) -> None:
@@ -199,26 +181,31 @@ class LearningService:
     def attempt_history(self, round_id: str) -> list[dict[str, object]]:
         with self._connect() as connection:
             rows = connection.execute(
-                """SELECT a.answer_origin, a.reported_issue FROM learner_practice_attempts a
-                WHERE a.round_id = ? ORDER BY a.created_at""",
-                (round_id,),
+                "SELECT attempt_id, answer_origin, is_correct, reported_issue "
+                "FROM learner_practice_attempts WHERE learner_id = ? AND round_id = ? "
+                "ORDER BY rowid",
+                (self.learner_id, round_id),
             ).fetchall()
         return [
-            {"answer_origin": row["answer_origin"], "reported_issue": bool(row["reported_issue"])}
+            {
+                "attempt_id": row["attempt_id"],
+                "answer_origin": row["answer_origin"],
+                "is_correct": bool(row["is_correct"]),
+                "reported_issue": bool(row["reported_issue"]),
+            }
             for row in rows
         ]
 
-    def grade_lesson(self, lesson_id: str, quality: int, reviewed_at: datetime) -> StudyProgress:
-        if lesson_id not in {lesson.lesson_id for lesson in LESSONS} and not lesson_id.startswith(
-            "practice:"
-        ):
-            raise KeyError(lesson_id)
+    def schedule_review(self, round_id: str, quality: int, reviewed_at: datetime) -> StudyProgress:
+        """Apply SM-2: the interval uses the prior ease factor, then the ease is updated."""
+        self._round(round_id)
         if not 0 <= quality <= 5:
             raise ValueError("quality must be between 0 and 5")
         with self._connect() as connection:
             row = connection.execute(
-                "SELECT repetitions, interval_days, ease_factor FROM learner_study_progress WHERE learner_id=? AND lesson_id=?",
-                (self.learner_id, lesson_id),
+                "SELECT repetitions, interval_days, ease_factor FROM learner_review_schedule "
+                "WHERE learner_id = ? AND round_id = ?",
+                (self.learner_id, round_id),
             ).fetchone()
             repetitions, interval, ease = (0, 0, 2.5) if row is None else tuple(row)
             if quality < 3:
@@ -229,46 +216,47 @@ class LearningService:
                 repetitions, interval = 2, 6
             else:
                 repetitions, interval = repetitions + 1, max(1, round(interval * ease))
-            ease = max(1.3, ease + 0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02))
+            ease = round(max(1.3, ease + 0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02)), 2)
             progress = StudyProgress(
-                lesson_id=lesson_id,
+                round_id=round_id,
                 repetitions=repetitions,
                 interval_days=interval,
-                ease_factor=round(ease, 2),
-                last_reviewed_on=reviewed_at.date(),
+                ease_factor=ease,
+                last_reviewed_on=reviewed_at.astimezone(UTC).date(),
             )
             connection.execute(
-                """INSERT INTO learner_study_progress VALUES (?, ?, ?, ?, ?, ?)
-                ON CONFLICT(learner_id, lesson_id) DO UPDATE SET repetitions=excluded.repetitions,
-                interval_days=excluded.interval_days, ease_factor=excluded.ease_factor,
-                last_reviewed_on=excluded.last_reviewed_on""",
+                "INSERT INTO learner_review_schedule VALUES (?, ?, ?, ?, ?, ?) "
+                "ON CONFLICT(learner_id, round_id) DO UPDATE SET "
+                "repetitions=excluded.repetitions, interval_days=excluded.interval_days, "
+                "ease_factor=excluded.ease_factor, last_reviewed_on=excluded.last_reviewed_on",
                 (
                     self.learner_id,
-                    lesson_id,
-                    repetitions,
-                    interval,
-                    round(ease, 2),
-                    reviewed_at.date().isoformat(),
+                    round_id,
+                    progress.repetitions,
+                    progress.interval_days,
+                    progress.ease_factor,
+                    progress.last_reviewed_on.isoformat(),
                 ),
             )
         return progress
 
-    def progress(self, lesson_id: str) -> StudyProgress:
+    def _schedule_rows(self) -> list[StudyProgress]:
+        known = {item.round_id for item in PRACTICE_ROUNDS}
         with self._connect() as connection:
-            row = connection.execute(
-                "SELECT repetitions, interval_days, ease_factor, last_reviewed_on FROM learner_study_progress WHERE learner_id=? AND lesson_id=?",
-                (self.learner_id, lesson_id),
-            ).fetchone()
-        if row is None:
-            raise KeyError(lesson_id)
-        return StudyProgress(lesson_id=lesson_id, **dict(row))
+            rows = connection.execute(
+                "SELECT round_id, repetitions, interval_days, ease_factor, last_reviewed_on "
+                "FROM learner_review_schedule WHERE learner_id = ?",
+                (self.learner_id,),
+            ).fetchall()
+        return [StudyProgress(**dict(row)) for row in rows if row["round_id"] in known]
+
+    def progress(self, round_id: str) -> StudyProgress:
+        match = next((item for item in self._schedule_rows() if item.round_id == round_id), None)
+        if match is None:
+            raise KeyError(round_id)
+        return match
 
     def next_review(self) -> StudyReview:
-        with self._connect() as connection:
-            row = connection.execute(
-                """SELECT lesson_id, repetitions, interval_days, ease_factor, last_reviewed_on
-                FROM learner_study_progress WHERE learner_id = ?
-                ORDER BY last_reviewed_on, lesson_id LIMIT 1""",
-                (self.learner_id,),
-            ).fetchone()
-        return StudyReview(progress=None if row is None else StudyProgress(**dict(row)))
+        """Return the round with the earliest computed due date (last review + interval)."""
+        queue = sorted(self._schedule_rows(), key=lambda item: (item.next_review_on, item.round_id))
+        return StudyReview(progress=queue[0] if queue else None)

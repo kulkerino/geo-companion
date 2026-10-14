@@ -1,21 +1,14 @@
 """FastAPI entrypoint for the loopback-only local service."""
-# ruff: noqa: E501
-
-from datetime import UTC
 
 from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel, ConfigDict
 
 from geo_companion.contracts import (
     Feedback,
-    LessonPublic,
     PracticeAnswerResult,
     PracticeAnswerSubmission,
     PracticeClue,
     PracticeRoundPublic,
-    QuizAnswerResult,
-    QuizAnswerSubmission,
-    StudyGrade,
     StudyProgress,
     StudyReview,
 )
@@ -39,15 +32,6 @@ class PacksResponse(ResponseModel):
     packs: tuple[PackSummary, ...]
 
 
-class LessonSummary(ResponseModel):
-    lesson_id: str
-    title: str
-
-
-class LessonsResponse(ResponseModel):
-    lessons: tuple[LessonSummary, ...]
-
-
 app = FastAPI(title="Geo Companion API", version="0.1.0")
 learning_service: LearningService | None = None
 
@@ -58,6 +42,13 @@ def service() -> LearningService:
     if learning_service is None:
         learning_service = LearningService(application_data_dir() / "runtime.sqlite3")
     return learning_service
+
+
+def round_not_found(round_id: str) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=f"Practice round '{round_id}' was not found.",
+    )
 
 
 @app.get("/api/v1/health")
@@ -80,49 +71,19 @@ async def list_packs() -> PacksResponse:
     )
 
 
-@app.get("/api/v1/lessons", response_model=LessonsResponse)
-async def list_lessons() -> LessonsResponse:
-    """List the three original, cleared starter lessons."""
-    return LessonsResponse(
-        lessons=tuple(
-            LessonSummary(lesson_id=item.lesson_id, title=item.title)
-            for item in service().lessons()
-        )
-    )
-
-
-@app.get("/api/v1/lessons/{lesson_id}", response_model=LessonPublic)
-async def get_lesson(lesson_id: str) -> LessonPublic:
-    """Return a safe lesson projection; its quiz key is not serialised."""
-    try:
-        return service().lesson_public(lesson_id)
-    except KeyError as error:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=f"Lesson '{lesson_id}' was not found."
-        ) from error
-
-
-@app.post("/api/v1/lessons/{lesson_id}/quizzes/{quiz_id}/answers", response_model=QuizAnswerResult)
-async def submit_quiz_answer(
-    lesson_id: str, quiz_id: str, submission: QuizAnswerSubmission
-) -> QuizAnswerResult:
-    """Check one deterministic quiz answer and release its cited explanation."""
-    try:
-        return service().answer_quiz(lesson_id, quiz_id, submission.selected_choice)
-    except KeyError as error:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Lesson or quiz was not found."
-        ) from error
-    except ValueError as error:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(error)
-        ) from error
-
-
 @app.get("/api/v1/practice/rounds/next", response_model=PracticeRoundPublic)
 async def next_practice_round() -> PracticeRoundPublic:
     """Serve an original diagram only; answers never leave this route before submission."""
     return service().next_round()
+
+
+@app.get("/api/v1/practice/rounds/{round_id}", response_model=PracticeRoundPublic)
+async def get_practice_round(round_id: str) -> PracticeRoundPublic:
+    """Reopen one round's public payload, e.g. for a scheduled review; no answer is included."""
+    try:
+        return service().round_public(round_id)
+    except KeyError as error:
+        raise round_not_found(round_id) from error
 
 
 @app.get("/api/v1/practice/rounds/{round_id}/clue", response_model=PracticeClue)
@@ -131,24 +92,18 @@ async def get_practice_clue(round_id: str) -> PracticeClue:
     try:
         return service().clue(round_id)
     except KeyError as error:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Practice round '{round_id}' was not found.",
-        ) from error
+        raise round_not_found(round_id) from error
 
 
 @app.post("/api/v1/practice/rounds/{round_id}/answers", response_model=PracticeAnswerResult)
 async def submit_practice_answer(
     round_id: str, submission: PracticeAnswerSubmission
 ) -> PracticeAnswerResult:
-    """Persist the pseudonymous attempt, then reveal independently sourced truth."""
+    """Persist the pseudonymous attempt and its review schedule, then reveal the answer."""
     try:
         return service().submit_practice(round_id, submission)
     except KeyError as error:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Practice round '{round_id}' was not found.",
-        ) from error
+        raise round_not_found(round_id) from error
 
 
 @app.post("/api/v1/feedback", status_code=status.HTTP_204_NO_CONTENT)
@@ -163,33 +118,19 @@ async def submit_feedback(feedback: Feedback) -> None:
         ) from error
 
 
-@app.get("/api/v1/study/progress/{lesson_id}", response_model=StudyProgress)
-async def get_study_progress(lesson_id: str) -> StudyProgress:
-    """Return persisted pseudonymous SM-2 state for one lesson."""
+@app.get("/api/v1/study/progress/{round_id}", response_model=StudyProgress)
+async def get_study_progress(round_id: str) -> StudyProgress:
+    """Return persisted pseudonymous SM-2 state for one practice round."""
     try:
-        return service().progress(lesson_id)
+        return service().progress(round_id)
     except KeyError as error:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No study progress exists for lesson '{lesson_id}'.",
+            detail=f"No study progress exists for round '{round_id}'.",
         ) from error
 
 
 @app.get("/api/v1/study/review/next", response_model=StudyReview)
 async def next_study_review() -> StudyReview:
-    """Return the next locally scheduled item without inventing a review on clean start."""
+    """Return the earliest-due local review without inventing one on clean start."""
     return service().next_review()
-
-
-@app.post("/api/v1/study/grades", response_model=StudyProgress)
-async def record_study_grade(grade: StudyGrade) -> StudyProgress:
-    """Apply standard SM-2 to the local review queue."""
-    try:
-        return service().grade_lesson(
-            grade.lesson_id, grade.quality, grade.reviewed_at.astimezone(UTC)
-        )
-    except KeyError as error:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Lesson '{grade.lesson_id}' was not found.",
-        ) from error

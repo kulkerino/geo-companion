@@ -63,6 +63,7 @@ def test_practice_round_public_contract_keeps_answer_and_coordinate_hidden() -> 
         "round_id": "bollards-practice-1",
         "asset_id": "original-bollards-diagram",
         "asset_attribution": pack.practice_rounds[0].asset_attribution.model_dump(mode="json"),
+        "asset_description": "Original educational practice diagram.",
     }
     assert "answer" not in public_round.model_dump()
     assert "coordinate" not in public_round.model_dump()
@@ -135,7 +136,7 @@ def test_study_model_and_experiment_contracts_keep_optional_model_offline_safe()
         StudyProgress,
     )
 
-    progress = StudyProgress(lesson_id="bollards", repetitions=2, interval_days=6, ease_factor=2.5)
+    progress = StudyProgress(round_id="bollards", repetitions=2, interval_days=6, ease_factor=2.5)
     manifest = ModelManifest(
         model_id="student-small.onnx",
         version="1.0.0",

@@ -23,7 +23,7 @@ will have FastAPI serve the built React application; it must remain bound to
 loopback and retain SQLite as the laptop's sole live database.
 
 The Vite development server proxies `/api/*` to the loopback FastAPI server;
-start both commands above, then use the Knowledge, Open Practice, and Study tabs.
+start both commands above, then use the Open Practice and Study review tabs.
 For a reproducible fresh learner database, set an explicit application-data
 directory before starting FastAPI:
 
@@ -33,7 +33,8 @@ GEO_COMPANION_DATA_DIR=/tmp/geo-companion-clean-start \
 ```
 
 No request leaves the laptop: the bundled diagrams are original teaching assets,
-not Street View or other captured imagery.
+not Street View or other captured imagery. They are rendered deterministically by
+`packages/api/scripts/generate_starter_diagrams.py` (use `--check` to detect drift).
 
 ## Verification
 
@@ -41,6 +42,8 @@ not Street View or other captured imagery.
 uv run pytest
 uv run ruff check .
 uv run mypy
+uv run python packages/api/scripts/generate_api_contract.py --check
+uv run python packages/api/scripts/generate_starter_diagrams.py --check
 pnpm --dir apps/web test
 pnpm --dir apps/web lint
 pnpm --dir apps/web typecheck

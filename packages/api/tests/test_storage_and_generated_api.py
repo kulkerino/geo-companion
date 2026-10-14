@@ -84,7 +84,10 @@ def test_generated_client_requires_request_bodies_and_concrete_path_parameters()
     generated_types = generated_types_path.read_text()
 
     assert "submit_feedback_api_v1_feedback_post(body: Feedback)" in generated_types
-    assert "get_lesson_api_v1_lessons__lesson_id__get(lesson_id: string)" in generated_types
+    assert (
+        "get_practice_round_api_v1_practice_rounds__round_id__get(round_id: string)"
+        in generated_types
+    )
     assert (
         "submit_practice_answer_api_v1_practice_rounds__round_id__answers_post(" in generated_types
     )

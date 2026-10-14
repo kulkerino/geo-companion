@@ -5,6 +5,8 @@ from pathlib import Path
 
 
 def test_production_web_bundle_contains_no_starter_answer_or_synthetic_coordinate() -> None:
+    from geo_companion.starter_pack import STARTER_DIAGRAMS
+
     repository_root = Path(__file__).resolve().parents[3]
     result = subprocess.run(
         ["pnpm", "--dir", "apps/web", "build"],
@@ -17,5 +19,8 @@ def test_production_web_bundle_contains_no_starter_answer_or_synthetic_coordinat
     bundle = "".join(
         asset.read_text() for asset in (repository_root / "apps/web/dist/assets").glob("*.js")
     )
-    for forbidden in ("Slovakia", "48.15", "17.11", 'country_code:"SK"'):
-        assert forbidden not in bundle
+    forbidden = ["48.15", "17.11", "Authored teaching target", 'country_code:"']
+    for evidence in STARTER_DIAGRAMS:
+        forbidden.extend((evidence.country_name, evidence.place_name, evidence.office_phrase))
+    for text in forbidden:
+        assert text not in bundle, text

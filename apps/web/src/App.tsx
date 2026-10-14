@@ -2,161 +2,189 @@ import { useEffect, useState } from "react";
 
 import {
   GeoCompanionApiClient,
-  type LessonPublic,
-  type LessonsResponse,
+  type Attribution,
   type PracticeAnswerResult,
   type PracticeRoundPublic,
-  type QuizAnswerResult,
   type StudyProgress,
 } from "./api/generated";
 import "./app.css";
 
 const client = new GeoCompanionApiClient();
-type View = "knowledge" | "practice" | "study";
+type View = "practice" | "study";
 
 function message(error: unknown) {
   return error instanceof Error ? error.message : "The local learning service is unavailable.";
 }
 
+function days(count: number) {
+  return `${count} ${count === 1 ? "day" : "days"}`;
+}
+
+function AttributionDetails({ attribution, label }: { attribution: Attribution; label: string }) {
+  return (
+    <dl className="source" aria-label={label}>
+      <dt>Source</dt>
+      <dd>
+        <a href={attribution.source_url} target="_blank" rel="noreferrer noopener">{attribution.source_title}</a>
+      </dd>
+      <dt>Attribution</dt>
+      <dd>{attribution.attribution_text}</dd>
+      <dt>Creator</dt>
+      <dd>{attribution.creator}</dd>
+      <dt>License</dt>
+      <dd>
+        <a href={attribution.license_url} target="_blank" rel="noreferrer noopener">{attribution.license_name}</a>
+      </dd>
+      <dt>Rights status</dt>
+      <dd>{attribution.rights_status}</dd>
+      <dt>Geographic scope</dt>
+      <dd>{attribution.geographic_scope}</dd>
+      <dt>Accessed / reviewed</dt>
+      <dd>{attribution.accessed_on} / {attribution.reviewed_on}</dd>
+    </dl>
+  );
+}
+
+function Schedule({ progress }: { progress: StudyProgress }) {
+  return (
+    <p>
+      Next review of {progress.round_id} on {progress.next_review_on} (interval {days(progress.interval_days)}, ease {progress.ease_factor}).
+    </p>
+  );
+}
+
+function outcome(reveal: PracticeAnswerResult) {
+  if (reveal.submission.skipped) return "Skipped.";
+  const confidence = reveal.submission.uncertain ? " (marked uncertain)" : "";
+  return reveal.is_correct
+    ? `Correct${confidence}.`
+    : `Not correct${confidence}: you guessed ${reveal.submission.country_code ?? "nothing"}.`;
+}
+
 function App() {
-  const [view, setView] = useState<View>("knowledge");
-  const [lessons, setLessons] = useState<LessonsResponse["lessons"]>([]);
-  const [lesson, setLesson] = useState<LessonPublic | null>(null);
-  const [quizResult, setQuizResult] = useState<QuizAnswerResult | null>(null);
-  const [schedule, setSchedule] = useState<StudyProgress | null>(null);
+  const [view, setView] = useState<View>("practice");
   const [round, setRound] = useState<PracticeRoundPublic | null>(null);
   const [clue, setClue] = useState<string | null>(null);
   const [reveal, setReveal] = useState<PracticeAnswerResult | null>(null);
   const [guess, setGuess] = useState("");
+  const [notice, setNotice] = useState<string | null>(null);
+  const [review, setReview] = useState<StudyProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
 
-  const loadLesson = async (lessonId: string) => {
+  const startRound = (next: PracticeRoundPublic) => {
+    setRound(next);
+    setClue(null);
+    setReveal(null);
+    setGuess("");
+    setNotice(null);
+  };
+
+  const run = async (action: () => Promise<void>) => {
     try {
+      setPending(true);
       setError(null);
-      setQuizResult(null);
-      setSchedule(null);
-      setLesson(await client.get_lesson_api_v1_lessons__lesson_id__get(lessonId));
+      await action();
     } catch (caught) {
       setError(message(caught));
+    } finally {
+      setPending(false);
     }
   };
+
+  const loadNextRound = () => run(async () => startRound(await client.next_practice_round_api_v1_practice_rounds_next_get()));
 
   useEffect(() => {
-    void (async () => {
-      try {
-        const response = await client.list_lessons_api_v1_lessons_get();
-        setLessons(response.lessons);
-        if (response.lessons[0]) await loadLesson(response.lessons[0].lesson_id);
-      } catch (caught) {
-        setError(message(caught));
-      }
-    })();
+    void loadNextRound();
+    // Only the first render loads a round; later loads are explicit learner actions.
   }, []);
 
-  const loadRound = async () => {
-    try {
-      setError(null);
-      setClue(null);
-      setReveal(null);
-      setGuess("");
-      setRound(await client.next_practice_round_api_v1_practice_rounds_next_get());
-    } catch (caught) {
-      setError(message(caught));
-    }
-  };
-
-  const openPractice = () => {
-    setView("practice");
-    if (!round || reveal) void loadRound();
-  };
+  const openPractice = () => setView("practice");
 
   const openStudy = () => {
     setView("study");
-    void (async () => {
-      try {
-        setError(null);
-        const review = await client.next_study_review_api_v1_study_review_next_get();
-        setSchedule(review.progress ?? null);
-      } catch (caught) {
-        setError(message(caught));
-      }
-    })();
+    void run(async () => setReview((await client.next_study_review_api_v1_study_review_next_get()).progress ?? null));
   };
 
-  const answerQuiz = async (quizId: string, selectedChoice: string) => {
-    if (!lesson) return;
-    try {
-      setError(null);
-      setQuizResult(await client.submit_quiz_answer_api_v1_lessons__lesson_id__quizzes__quiz_id__answers_post(lesson.lesson_id, quizId, { selected_choice: selectedChoice }));
-    } catch (caught) {
-      setError(message(caught));
-    }
+  const practiceReview = (roundId: string) => run(async () => {
+    startRound(await client.get_practice_round_api_v1_practice_rounds__round_id__get(roundId));
+    setView("practice");
+  });
+
+  const revealClue = (roundId: string) => run(async () => setClue((await client.get_practice_clue_api_v1_practice_rounds__round_id__clue_get(roundId)).clue));
+
+  const submitPractice = (roundId: string, skipped: boolean, uncertain: boolean) => run(async () => {
+    const body = skipped ? { skipped: true, uncertain } : { country_code: guess.trim().toUpperCase(), uncertain };
+    setReveal(await client.submit_practice_answer_api_v1_practice_rounds__round_id__answers_post(roundId, body));
+  });
+
+  const sendFeedback = (result: PracticeAnswerResult, reportedIssue: boolean) => run(async () => {
+    await client.submit_feedback_api_v1_feedback_post({
+      attempt_id: result.attempt_id,
+      round_id: result.round_id,
+      rating: reportedIssue ? 1 : 4,
+      note: reportedIssue ? "Learner reported an issue with this round." : "Useful round.",
+      reported_issue: reportedIssue,
+    });
+    setNotice(reportedIssue ? "Report saved locally for this attempt; it does not replace the authored answer." : "Feedback saved locally.");
+  });
+
+  const retrySameRound = () => {
+    if (round) startRound(round);
   };
 
-  const grade = async (quality: number) => {
-    if (!lesson) return;
-    try {
-      setError(null);
-      setSchedule(await client.record_study_grade_api_v1_study_grades_post({ lesson_id: lesson.lesson_id, quality, reviewed_at: new Date().toISOString() }));
-    } catch (caught) {
-      setError(message(caught));
-    }
-  };
-
-  const revealClue = async () => {
-    if (!round) return;
-    try {
-      setError(null);
-      setClue((await client.get_practice_clue_api_v1_practice_rounds__round_id__clue_get(round.round_id)).clue);
-    } catch (caught) {
-      setError(message(caught));
-    }
-  };
-
-  const submitPractice = async (skipped: boolean, uncertain: boolean) => {
-    if (!round) return;
-    try {
-      setError(null);
-      const body = skipped ? { skipped: true, uncertain } : { country_code: guess.trim().toUpperCase(), uncertain };
-      const answer = await client.submit_practice_answer_api_v1_practice_rounds__round_id__answers_post(round.round_id, body);
-      setReveal(answer);
-      setSchedule(answer.study_progress ?? null);
-    } catch (caught) {
-      setError(message(caught));
-    }
-  };
-
-  const report = async (reportedIssue: boolean) => {
-    if (!reveal) return;
-    try {
-      setError(null);
-      await client.submit_feedback_api_v1_feedback_post({ attempt_id: reveal.attempt_id, round_id: reveal.round_id, rating: reportedIssue ? 1 : 4, note: reportedIssue ? "Learner report" : "Useful round", reported_issue: reportedIssue });
-      setClue(reportedIssue ? "Report saved locally; it does not replace the authored target." : "Feedback saved locally.");
-    } catch (caught) {
-      setError(message(caught));
-    }
-  };
+  const validGuess = /^[A-Za-z]{2}$/.test(guess.trim());
 
   return (
     <main className="shell">
       <p className="eyebrow">Local learning companion · offline starter pack</p>
       <h1>Geo Companion</h1>
       <nav aria-label="Learning modes" className="tabs">
-        <button type="button" onClick={() => setView("knowledge")}>Knowledge</button>
-        <button type="button" onClick={openPractice}>Open Practice</button>
-        <button type="button" onClick={openStudy}>Study</button>
+        <button type="button" aria-pressed={view === "practice"} onClick={openPractice}>Open Practice</button>
+        <button type="button" aria-pressed={view === "study"} onClick={openStudy}>Study review</button>
       </nav>
       {error && <p role="alert">{error}</p>}
-      {view === "knowledge" && <section aria-labelledby="knowledge-title">
-        <h2 id="knowledge-title">{lesson?.title ?? "Loading lessons…"}</h2>
-        {lessons.length > 1 && <label>Choose lesson<select aria-label="Choose lesson" value={lesson?.lesson_id ?? ""} onChange={(event) => void loadLesson(event.target.value)}>{lessons.map((item) => <option key={item.lesson_id} value={item.lesson_id}>{item.title}</option>)}</select></label>}
-        {lesson && <><p>{lesson.body}</p><p className="source">{lesson.citations[0]?.attribution_text}</p>{lesson.quiz_items.map((quiz) => <article key={quiz.quiz_id}><h3>{quiz.prompt}</h3>{!quizResult ? quiz.choices.map((choice) => <button className="choice" key={choice} type="button" onClick={() => void answerQuiz(quiz.quiz_id, choice)}>{choice}</button>) : <div className="result"><p>{quizResult.explanation}</p><p className="source">{quizResult.citations[0]?.attribution_text}</p>{[[1, "Again"], [3, "Hard"], [4, "Good"], [5, "Easy"]].map(([quality, label]) => <button key={String(label)} type="button" onClick={() => void grade(Number(quality))}>{label}</button>)}{schedule && <p>Review scheduled in {schedule.interval_days} day.</p>}</div>}</article>)}</>}
-      </section>}
       {view === "practice" && <section aria-labelledby="practice-title">
         <h2 id="practice-title">Open Practice</h2>
-        {round && <><img className="fixture" src={`/starter-assets/${round.asset_id}`} alt="Original educational country-clue diagram" /><p>{round.asset_attribution.attribution_text}</p>{!reveal ? <><button type="button" onClick={() => void revealClue()}>Reveal optional clue</button>{clue && <p>{clue}</p>}<label htmlFor="guess">Country-code guess</label><input id="guess" value={guess} onChange={(event) => setGuess(event.target.value)} maxLength={2} /><button type="button" disabled={!guess.trim()} onClick={() => void submitPractice(false, false)}>Submit guess</button><button type="button" disabled={!guess.trim()} onClick={() => void submitPractice(false, true)}>Submit uncertain guess</button><button type="button" onClick={() => void submitPractice(true, false)}>Skip</button><button type="button" onClick={() => void submitPractice(true, true)}>Skip as uncertain</button></> : <div className="result"><p>{reveal.answer.explanation}</p><p className="source">Answer origin: {reveal.answer.answer_origin}; separate from learner feedback and corrections.</p><button type="button" onClick={() => void report(false)}>Useful</button><button type="button" onClick={() => void report(true)}>Report issue</button><button type="button" onClick={() => void loadRound()}>Retry / next round</button></div>}</>}
+        {!round && !error && <p>Loading a practice round…</p>}
+        {round && <>
+          <p className="round-id">Round {round.round_id}</p>
+          <img className="fixture" src={`/starter-assets/${encodeURIComponent(round.asset_id)}`} alt={round.asset_description} />
+          <AttributionDetails attribution={round.asset_attribution} label="Diagram attribution" />
+          {!reveal ? <div className="attempt">
+            <button type="button" onClick={() => void revealClue(round.round_id)}>Reveal optional clue</button>
+            {clue && <p className="clue">{clue}</p>}
+            <label htmlFor="guess">Country-code guess (two letters, e.g. FR)</label>
+            <input id="guess" value={guess} onChange={(event) => setGuess(event.target.value)} maxLength={2} autoComplete="off" />
+            <div className="actions">
+              <button type="button" disabled={pending || !validGuess} onClick={() => void submitPractice(round.round_id, false, false)}>Submit guess</button>
+              <button type="button" disabled={pending || !validGuess} onClick={() => void submitPractice(round.round_id, false, true)}>Submit uncertain guess</button>
+              <button type="button" disabled={pending} onClick={() => void submitPractice(round.round_id, true, false)}>Skip</button>
+            </div>
+          </div> : <div className="result">
+            <p className="outcome">{outcome(reveal)}</p>
+            <p>Answer: <strong>{reveal.answer.country_code}</strong></p>
+            <p>{reveal.answer.explanation}</p>
+            <p className="origin">Answer origin: {reveal.answer.answer_origin}. Your feedback and reports are stored separately and never change it.</p>
+            {reveal.answer.citations.map((citation, index) => <AttributionDetails key={index} attribution={citation} label="Answer citation" />)}
+            {reveal.study_progress && <Schedule progress={reveal.study_progress} />}
+            {notice && <p className="notice" role="status">{notice}</p>}
+            <div className="actions">
+              <button type="button" disabled={pending} onClick={() => void sendFeedback(reveal, false)}>Useful</button>
+              <button type="button" disabled={pending} onClick={() => void sendFeedback(reveal, true)}>Report issue</button>
+              <button type="button" disabled={pending} onClick={retrySameRound}>Retry same round</button>
+              <button type="button" disabled={pending} onClick={() => void loadNextRound()}>Next round</button>
+            </div>
+          </div>}
+        </>}
       </section>}
-      {view === "study" && <section aria-labelledby="study-title"><h2 id="study-title">Study review</h2><p>{schedule ? `${schedule.lesson_id} is scheduled in ${schedule.interval_days} day.` : "Grade a lesson or finish a practice round to add a local review."}</p></section>}
+      {view === "study" && <section aria-labelledby="study-title">
+        <h2 id="study-title">Study review</h2>
+        {review ? <>
+          <Schedule progress={review} />
+          <button type="button" onClick={() => void practiceReview(review.round_id)}>Practice this round</button>
+        </> : <p>No review is scheduled yet. Finish a practice round to add one.</p>}
+      </section>}
     </main>
   );
 }

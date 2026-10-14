@@ -57,6 +57,11 @@
 
 ### Task 3: Standalone offline vertical slice
 
+> **Scope change (2026-10-14, kulo):** Knowledge lessons are dropped. Task 3 delivers Open
+> Practice only (clue -> guess/skip/uncertain -> reveal -> feedback/report -> retry/next ->
+> SM-2 review) over ten original cleared diagrams. The lesson items below are superseded; the
+> dormant `Lesson`/`QuizItem` domain contracts remain only so Task 2 pack fixtures stay valid.
+
 **Files:** Add a bundled starter pack, learning services, SM-2 scheduling, React Knowledge/Open Practice screens, and end-to-end tests.
 
 **Interfaces:** Implement lesson -> quiz -> explanation -> grade and image -> guess -> reveal -> feedback -> review without network access.

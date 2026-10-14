@@ -1,7 +1,7 @@
 # Project brief
 
 Geo Companion is a private school project for learning visual geographic clues
-from sourced lessons and licensed practice material. Its independent learning
+from cleared practice material with known, explained answers. Its independent learning
 loop must run locally and offline; optional model, worker, and GeoGuessr review
 adapter work cannot become prerequisites for that loop.
 

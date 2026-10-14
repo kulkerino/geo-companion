@@ -91,3 +91,21 @@ All commands passed. The audit command is silent on success.
   TypeScript, Vite build, and repository audit passed. The revised clean-start ASGI smoke created
   only `/tmp/geo-companion-task3-corrective/runtime.sqlite3` and completed lesson→quiz→grade plus
   public practice→clue→skip→reveal→attempt feedback→review without network access.
+
+## Final corrective pass — 2026-10-14
+
+This section supersedes the lesson inventory, UNECE/OSM citation notes, mocked "browser-flow
+evidence", and the "audit passed" claim above. Full detail is in
+`journal/2026-10-14-task-3-standalone-offline-vertical-slice.md`.
+
+- Scope change from kulo: Knowledge lessons dropped; Task 3 is Open Practice + SM-2 review.
+- Ten new deterministic CC0 diagrams (named city + agreeing office wording) with an
+  independent evidence audit; generic non-leaking clue; all-cleared publication gate restored.
+- Retry same round vs next round, uncertain-correct scheduling, due-date ordering, full
+  attribution UI, and a combined React -> FastAPI -> SQLite test via a stdio ASGI bridge.
+- The repository audit failed at `7e61cef` (`.superpowers/sdd/.gitignore` ignored itself);
+  fixed by removing the redundant file. `typecheck` previously checked nothing; fixed.
+- Verification: pytest 62 passed; ruff, mypy, OpenAPI and diagram drift checks, Vitest (6),
+  ESLint, typecheck, build, and repository audit all exit 0.
+- Real uvicorn + Vite clean-start smoke in the desktop browser pane passed, including API
+  restart persistence and a visible 502 while the API was stopped.

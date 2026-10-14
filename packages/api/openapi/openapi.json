@@ -226,94 +226,6 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
-      "LessonPublic": {
-        "additionalProperties": false,
-        "description": "A lesson projection that cannot leak the deterministic answer key.",
-        "properties": {
-          "body": {
-            "title": "Body",
-            "type": "string"
-          },
-          "citations": {
-            "items": {
-              "$ref": "#/components/schemas/Citation"
-            },
-            "title": "Citations",
-            "type": "array"
-          },
-          "diagram_asset_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Diagram Asset Id"
-          },
-          "lesson_id": {
-            "title": "Lesson Id",
-            "type": "string"
-          },
-          "quiz_items": {
-            "items": {
-              "$ref": "#/components/schemas/QuizItemPublic"
-            },
-            "title": "Quiz Items",
-            "type": "array"
-          },
-          "title": {
-            "title": "Title",
-            "type": "string"
-          }
-        },
-        "required": [
-          "lesson_id",
-          "title",
-          "body",
-          "citations",
-          "quiz_items"
-        ],
-        "title": "LessonPublic",
-        "type": "object"
-      },
-      "LessonSummary": {
-        "additionalProperties": false,
-        "properties": {
-          "lesson_id": {
-            "title": "Lesson Id",
-            "type": "string"
-          },
-          "title": {
-            "title": "Title",
-            "type": "string"
-          }
-        },
-        "required": [
-          "lesson_id",
-          "title"
-        ],
-        "title": "LessonSummary",
-        "type": "object"
-      },
-      "LessonsResponse": {
-        "additionalProperties": false,
-        "properties": {
-          "lessons": {
-            "items": {
-              "$ref": "#/components/schemas/LessonSummary"
-            },
-            "title": "Lessons",
-            "type": "array"
-          }
-        },
-        "required": [
-          "lessons"
-        ],
-        "title": "LessonsResponse",
-        "type": "object"
-      },
       "PackSummary": {
         "additionalProperties": false,
         "properties": {
@@ -414,8 +326,7 @@
           "country_code": {
             "anyOf": [
               {
-                "maxLength": 2,
-                "minLength": 2,
+                "pattern": "^[A-Z]{2}$",
                 "type": "string"
               },
               {
@@ -477,6 +388,10 @@
           "asset_attribution": {
             "$ref": "#/components/schemas/Attribution"
           },
+          "asset_description": {
+            "title": "Asset Description",
+            "type": "string"
+          },
           "asset_id": {
             "title": "Asset Id",
             "type": "string"
@@ -489,94 +404,10 @@
         "required": [
           "round_id",
           "asset_id",
-          "asset_attribution"
+          "asset_attribution",
+          "asset_description"
         ],
         "title": "PracticeRoundPublic",
-        "type": "object"
-      },
-      "QuizAnswerResult": {
-        "additionalProperties": false,
-        "properties": {
-          "citations": {
-            "items": {
-              "$ref": "#/components/schemas/Citation"
-            },
-            "title": "Citations",
-            "type": "array"
-          },
-          "explanation": {
-            "title": "Explanation",
-            "type": "string"
-          },
-          "is_correct": {
-            "title": "Is Correct",
-            "type": "boolean"
-          },
-          "lesson_id": {
-            "title": "Lesson Id",
-            "type": "string"
-          },
-          "quiz_id": {
-            "title": "Quiz Id",
-            "type": "string"
-          },
-          "selected_choice": {
-            "title": "Selected Choice",
-            "type": "string"
-          }
-        },
-        "required": [
-          "lesson_id",
-          "quiz_id",
-          "selected_choice",
-          "is_correct",
-          "explanation",
-          "citations"
-        ],
-        "title": "QuizAnswerResult",
-        "type": "object"
-      },
-      "QuizAnswerSubmission": {
-        "additionalProperties": false,
-        "properties": {
-          "selected_choice": {
-            "minLength": 1,
-            "title": "Selected Choice",
-            "type": "string"
-          }
-        },
-        "required": [
-          "selected_choice"
-        ],
-        "title": "QuizAnswerSubmission",
-        "type": "object"
-      },
-      "QuizItemPublic": {
-        "additionalProperties": false,
-        "description": "Quiz prompt shown before the learner commits an answer.",
-        "properties": {
-          "choices": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Choices",
-            "type": "array"
-          },
-          "prompt": {
-            "title": "Prompt",
-            "type": "string"
-          },
-          "quiz_id": {
-            "title": "Quiz Id",
-            "type": "string"
-          }
-        },
-        "required": [
-          "quiz_id",
-          "prompt",
-          "choices"
-        ],
-        "title": "QuizItemPublic",
         "type": "object"
       },
       "RightsStatus": {
@@ -639,36 +470,9 @@
         "title": "SourceTruthAnswer",
         "type": "object"
       },
-      "StudyGrade": {
-        "additionalProperties": false,
-        "properties": {
-          "lesson_id": {
-            "minLength": 1,
-            "title": "Lesson Id",
-            "type": "string"
-          },
-          "quality": {
-            "maximum": 5.0,
-            "minimum": 0.0,
-            "title": "Quality",
-            "type": "integer"
-          },
-          "reviewed_at": {
-            "format": "date-time",
-            "title": "Reviewed At",
-            "type": "string"
-          }
-        },
-        "required": [
-          "lesson_id",
-          "quality",
-          "reviewed_at"
-        ],
-        "title": "StudyGrade",
-        "type": "object"
-      },
       "StudyProgress": {
         "additionalProperties": false,
+        "description": "SM-2 review state for one practice round, derived only from local attempts.",
         "properties": {
           "ease_factor": {
             "minimum": 1.3,
@@ -685,22 +489,30 @@
             "title": "Last Reviewed On",
             "type": "string"
           },
-          "lesson_id": {
-            "minLength": 1,
-            "title": "Lesson Id",
+          "next_review_on": {
+            "description": "The due date the review queue is ordered by.",
+            "format": "date",
+            "readOnly": true,
+            "title": "Next Review On",
             "type": "string"
           },
           "repetitions": {
             "minimum": 0.0,
             "title": "Repetitions",
             "type": "integer"
+          },
+          "round_id": {
+            "minLength": 1,
+            "title": "Round Id",
+            "type": "string"
           }
         },
         "required": [
-          "lesson_id",
+          "round_id",
           "repetitions",
           "interval_days",
-          "ease_factor"
+          "ease_factor",
+          "next_review_on"
         ],
         "title": "StudyProgress",
         "type": "object"
@@ -819,124 +631,6 @@
         "summary": "Health"
       }
     },
-    "/api/v1/lessons": {
-      "get": {
-        "description": "List the three original, cleared starter lessons.",
-        "operationId": "list_lessons_api_v1_lessons_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LessonsResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "List Lessons"
-      }
-    },
-    "/api/v1/lessons/{lesson_id}": {
-      "get": {
-        "description": "Return a safe lesson projection; its quiz key is not serialised.",
-        "operationId": "get_lesson_api_v1_lessons__lesson_id__get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "lesson_id",
-            "required": true,
-            "schema": {
-              "title": "Lesson Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LessonPublic"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Get Lesson"
-      }
-    },
-    "/api/v1/lessons/{lesson_id}/quizzes/{quiz_id}/answers": {
-      "post": {
-        "description": "Check one deterministic quiz answer and release its cited explanation.",
-        "operationId": "submit_quiz_answer_api_v1_lessons__lesson_id__quizzes__quiz_id__answers_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "lesson_id",
-            "required": true,
-            "schema": {
-              "title": "Lesson Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "path",
-            "name": "quiz_id",
-            "required": true,
-            "schema": {
-              "title": "Quiz Id",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/QuizAnswerSubmission"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/QuizAnswerResult"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Submit Quiz Answer"
-      }
-    },
     "/api/v1/packs": {
       "get": {
         "description": "Expose the immutable bundled starter pack without a lifecycle/install flow.",
@@ -975,9 +669,49 @@
         "summary": "Next Practice Round"
       }
     },
+    "/api/v1/practice/rounds/{round_id}": {
+      "get": {
+        "description": "Reopen one round's public payload, e.g. for a scheduled review; no answer is included.",
+        "operationId": "get_practice_round_api_v1_practice_rounds__round_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "round_id",
+            "required": true,
+            "schema": {
+              "title": "Round Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PracticeRoundPublic"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Practice Round"
+      }
+    },
     "/api/v1/practice/rounds/{round_id}/answers": {
       "post": {
-        "description": "Persist the pseudonymous attempt, then reveal independently sourced truth.",
+        "description": "Persist the pseudonymous attempt and its review schedule, then reveal the answer.",
         "operationId": "submit_practice_answer_api_v1_practice_rounds__round_id__answers_post",
         "parameters": [
           {
@@ -1065,56 +799,17 @@
         "summary": "Get Practice Clue"
       }
     },
-    "/api/v1/study/grades": {
-      "post": {
-        "description": "Apply standard SM-2 to the local review queue.",
-        "operationId": "record_study_grade_api_v1_study_grades_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/StudyGrade"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/StudyProgress"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Record Study Grade"
-      }
-    },
-    "/api/v1/study/progress/{lesson_id}": {
+    "/api/v1/study/progress/{round_id}": {
       "get": {
-        "description": "Return persisted pseudonymous SM-2 state for one lesson.",
-        "operationId": "get_study_progress_api_v1_study_progress__lesson_id__get",
+        "description": "Return persisted pseudonymous SM-2 state for one practice round.",
+        "operationId": "get_study_progress_api_v1_study_progress__round_id__get",
         "parameters": [
           {
             "in": "path",
-            "name": "lesson_id",
+            "name": "round_id",
             "required": true,
             "schema": {
-              "title": "Lesson Id",
+              "title": "Round Id",
               "type": "string"
             }
           }
@@ -1146,7 +841,7 @@
     },
     "/api/v1/study/review/next": {
       "get": {
-        "description": "Return the next locally scheduled item without inventing a review on clean start.",
+        "description": "Return the earliest-due local review without inventing one on clean start.",
         "operationId": "next_study_review_api_v1_study_review_next_get",
         "responses": {
           "200": {

@@ -28,18 +28,18 @@ def test_contract_routes_are_versioned_and_have_safe_empty_or_not_found_behavior
     from geo_companion.main import app
 
     packs = request(app, "GET", "/api/v1/packs")
-    lessons = request(app, "GET", "/api/v1/lessons")
     next_round = request(app, "GET", "/api/v1/practice/rounds/next")
-    study = request(app, "GET", "/api/v1/study/progress/missing-lesson")
+    study = request(app, "GET", "/api/v1/study/progress/missing-round")
+    review = request(app, "GET", "/api/v1/study/review/next")
 
     assert packs.status_code == 200
     assert packs.json()["packs"][0]["pack_id"] == "starter-original-diagrams"
-    assert lessons.status_code == 200
-    assert len(lessons.json()["lessons"]) == 3
     assert next_round.status_code == 200
     assert "answer" not in next_round.json()
     assert study.status_code == 404
-    assert study.json()["detail"] == "No study progress exists for lesson 'missing-lesson'."
+    assert study.json()["detail"] == "No study progress exists for round 'missing-round'."
+    assert review.status_code == 200
+    assert review.json() == {"progress": None}
 
 
 def test_openapi_advertises_versioned_learning_contracts() -> None:
@@ -48,9 +48,11 @@ def test_openapi_advertises_versioned_learning_contracts() -> None:
     paths = app.openapi()["paths"]
 
     assert "/api/v1/packs" in paths
-    assert "/api/v1/lessons" in paths
     assert "/api/v1/practice/rounds/next" in paths
-    assert "/api/v1/study/progress/{lesson_id}" in paths
+    assert "/api/v1/practice/rounds/{round_id}" in paths
+    assert "/api/v1/study/progress/{round_id}" in paths
+    assert not any(path.startswith("/api/v1/lessons") for path in paths)
+    assert "/api/v1/study/grades" not in paths
 
 
 def test_feedback_rejects_an_unknown_revealed_attempt() -> None:
@@ -62,7 +64,7 @@ def test_feedback_rejects_an_unknown_revealed_attempt() -> None:
         "/api/v1/feedback",
         {
             "attempt_id": "missing-attempt",
-            "round_id": "starter-diagram-01",
+            "round_id": "starter-place-01",
             "rating": 3,
             "note": "Useful explanation.",
         },

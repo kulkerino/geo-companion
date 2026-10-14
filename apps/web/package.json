@@ -7,7 +7,7 @@
     "dev": "vite --host 127.0.0.1",
     "test": "vitest run",
     "lint": "eslint src --max-warnings=0",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit",
     "build": "tsc -b && vite build"
   },
   "dependencies": {

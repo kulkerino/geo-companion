@@ -7,7 +7,7 @@ from datetime import date, datetime, timedelta
 from enum import StrEnum
 from typing import Any, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, computed_field, model_validator
 
 
 class ContractModel(BaseModel):
@@ -81,38 +81,6 @@ class Lesson(ContractModel):
     quiz_items: tuple[QuizItem, ...]
 
 
-class QuizItemPublic(ContractModel):
-    """Quiz prompt shown before the learner commits an answer."""
-
-    quiz_id: str
-    prompt: str
-    choices: tuple[str, ...]
-
-
-class LessonPublic(ContractModel):
-    """A lesson projection that cannot leak the deterministic answer key."""
-
-    lesson_id: str
-    title: str
-    body: str
-    diagram_asset_id: str | None = None
-    citations: tuple[Citation, ...]
-    quiz_items: tuple[QuizItemPublic, ...]
-
-
-class QuizAnswerSubmission(ContractModel):
-    selected_choice: str = Field(min_length=1)
-
-
-class QuizAnswerResult(ContractModel):
-    lesson_id: str
-    quiz_id: str
-    selected_choice: str
-    is_correct: bool
-    explanation: str
-    citations: tuple[Citation, ...]
-
-
 class Coordinate(ContractModel):
     latitude: float = Field(ge=-90, le=90)
     longitude: float = Field(ge=-180, le=180)
@@ -132,6 +100,11 @@ class PracticeRound(ContractModel):
     round_id: str = Field(min_length=1)
     asset_id: str = Field(min_length=1)
     asset_attribution: Attribution
+    asset_description: str = Field(
+        default="Original educational practice diagram.",
+        min_length=1,
+        description="Accessible description of the visible evidence; must not name the answer.",
+    )
     clue: str = Field(default="No authored clue is available for this round.", min_length=1)
     answer: SourceTruthAnswer
 
@@ -142,6 +115,7 @@ class PracticeRoundPublic(ContractModel):
     round_id: str
     asset_id: str
     asset_attribution: Attribution
+    asset_description: str
 
     @classmethod
     def from_round(cls, round_: PracticeRound) -> PracticeRoundPublic:
@@ -149,6 +123,7 @@ class PracticeRoundPublic(ContractModel):
             round_id=round_.round_id,
             asset_id=round_.asset_id,
             asset_attribution=round_.asset_attribution,
+            asset_description=round_.asset_description,
         )
 
 
@@ -160,7 +135,7 @@ class PracticeClue(ContractModel):
 
 
 class PracticeAnswerSubmission(ContractModel):
-    country_code: str | None = Field(default=None, min_length=2, max_length=2)
+    country_code: str | None = Field(default=None, pattern=r"^[A-Z]{2}$")
     region_code: str | None = Field(default=None, min_length=1)
     coordinate: Coordinate | None = None
     skipped: bool = False
@@ -224,22 +199,19 @@ class Feedback(ContractModel):
 
 
 class StudyProgress(ContractModel):
-    lesson_id: str = Field(min_length=1)
+    """SM-2 review state for one practice round, derived only from local attempts."""
+
+    round_id: str = Field(min_length=1)
     repetitions: int = Field(ge=0)
     interval_days: int = Field(ge=0)
     ease_factor: float = Field(ge=1.3)
     last_reviewed_on: date = Field(default_factory=date.today)
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def next_review_on(self) -> date:
-        """Expose the simple schedule state without implementing SM-2 grading yet."""
+        """The due date the review queue is ordered by."""
         return self.last_reviewed_on + timedelta(days=self.interval_days)
-
-
-class StudyGrade(ContractModel):
-    lesson_id: str = Field(min_length=1)
-    quality: int = Field(ge=0, le=5)
-    reviewed_at: datetime
 
 
 class StudyReview(ContractModel):
@@ -316,21 +288,12 @@ class ContentPack(ContractModel):
         return (*lesson_attributions, *round_attributions)
 
     def is_publication_ready(self) -> bool:
-        """Only redistributed pack assets need cleared reuse rights.
+        """An active pack requires every asset attribution and citation to be cleared.
 
-        Citations may be reference-only: their URLs document a factual claim but do not grant
-        permission to copy the source itself into the pack.
+        ``reference-only`` material may support research outside an active pack, but it can
+        never make a pack publication-ready.
         """
-        return (
-            all(
-                round_.asset_attribution.rights_status is RightsStatus.CLEARED
-                for round_ in self.practice_rounds
-            )
-            and all(
-                item.rights_status is not RightsStatus.QUARANTINED
-                for item in self._attributions()
-            )
-        )
+        return all(item.rights_status is RightsStatus.CLEARED for item in self._attributions())
 
     def require_publication_ready(self) -> None:
         if not self.is_publication_ready():
