@@ -5,6 +5,8 @@ from pydantic import BaseModel, ConfigDict
 
 from geo_companion.contracts import (
     Feedback,
+    ModelPredictionResult,
+    ModelStatus,
     PracticeAnswerResult,
     PracticeAnswerSubmission,
     PracticeClue,
@@ -13,6 +15,7 @@ from geo_companion.contracts import (
     StudyReview,
 )
 from geo_companion.learning import LearningService
+from geo_companion.models import provider_from_environment
 from geo_companion.paths import application_data_dir
 from geo_companion.starter_pack import STARTER_PACK
 
@@ -40,7 +43,9 @@ def service() -> LearningService:
     """Open the local learner database lazily so schema/OpenAPI imports stay pure."""
     global learning_service
     if learning_service is None:
-        learning_service = LearningService(application_data_dir() / "runtime.sqlite3")
+        learning_service = LearningService(
+            application_data_dir() / "runtime.sqlite3", provider=provider_from_environment()
+        )
     return learning_service
 
 
@@ -116,6 +121,29 @@ async def submit_feedback(feedback: Feedback) -> None:
             status_code=status.HTTP_404_NOT_FOUND,
             detail="The feedback attempt was not found for this learner.",
         ) from error
+
+
+@app.get("/api/v1/models", response_model=ModelStatus)
+async def model_status() -> ModelStatus:
+    """Report the optional local model; ``active`` is null when none is enabled."""
+    return service().model_status()
+
+
+@app.get(
+    "/api/v1/practice/attempts/{attempt_id}/model-prediction",
+    response_model=ModelPredictionResult,
+)
+async def get_model_prediction(attempt_id: str) -> ModelPredictionResult:
+    """Return the model's post-answer opinion; it requires an answered or skipped attempt."""
+    try:
+        return service().model_prediction(attempt_id)
+    except LookupError as error:
+        detail = (
+            "The attempt was not found for this learner."
+            if isinstance(error, KeyError)
+            else str(error)
+        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail) from error
 
 
 @app.get("/api/v1/study/progress/{round_id}", response_model=StudyProgress)

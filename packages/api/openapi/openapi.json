@@ -226,6 +226,141 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "ModelCandidate": {
+        "additionalProperties": false,
+        "properties": {
+          "confidence": {
+            "exclusiveMinimum": 0.0,
+            "maximum": 1.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "country_code": {
+            "pattern": "^[A-Z]{2}$",
+            "title": "Country Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "country_code",
+          "confidence"
+        ],
+        "title": "ModelCandidate",
+        "type": "object"
+      },
+      "ModelInfo": {
+        "additionalProperties": false,
+        "description": "Identity of the local prediction provider; learning never requires one.",
+        "properties": {
+          "description": {
+            "minLength": 1,
+            "title": "Description",
+            "type": "string"
+          },
+          "is_placeholder": {
+            "title": "Is Placeholder",
+            "type": "boolean"
+          },
+          "model_id": {
+            "minLength": 1,
+            "title": "Model Id",
+            "type": "string"
+          },
+          "required_for_learning": {
+            "const": false,
+            "default": false,
+            "title": "Required For Learning",
+            "type": "boolean"
+          },
+          "runtime": {
+            "enum": [
+              "dummy",
+              "onnx",
+              "pytorch"
+            ],
+            "title": "Runtime",
+            "type": "string"
+          },
+          "version": {
+            "pattern": "^\\d+\\.\\d+\\.\\d+$",
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "model_id",
+          "version",
+          "runtime",
+          "is_placeholder",
+          "description"
+        ],
+        "title": "ModelInfo",
+        "type": "object"
+      },
+      "ModelPredictionResult": {
+        "additionalProperties": false,
+        "description": "A post-answer model opinion for one attempt; never source truth and never a hint.",
+        "properties": {
+          "abstained": {
+            "title": "Abstained",
+            "type": "boolean"
+          },
+          "attempt_id": {
+            "minLength": 1,
+            "title": "Attempt Id",
+            "type": "string"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/ModelCandidate"
+            },
+            "maxItems": 5,
+            "title": "Candidates",
+            "type": "array"
+          },
+          "model": {
+            "$ref": "#/components/schemas/ModelInfo"
+          },
+          "origin": {
+            "const": "model_prediction",
+            "default": "model_prediction",
+            "title": "Origin",
+            "type": "string"
+          },
+          "round_id": {
+            "minLength": 1,
+            "title": "Round Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "attempt_id",
+          "round_id",
+          "model",
+          "candidates",
+          "abstained"
+        ],
+        "title": "ModelPredictionResult",
+        "type": "object"
+      },
+      "ModelStatus": {
+        "additionalProperties": false,
+        "description": "Which provider is enabled; ``active`` is null when the app runs without a model.",
+        "properties": {
+          "active": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModelInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "ModelStatus",
+        "type": "object"
+      },
       "PackSummary": {
         "additionalProperties": false,
         "properties": {
@@ -631,6 +766,25 @@
         "summary": "Health"
       }
     },
+    "/api/v1/models": {
+      "get": {
+        "description": "Report the optional local model; ``active`` is null when none is enabled.",
+        "operationId": "model_status_api_v1_models_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Model Status"
+      }
+    },
     "/api/v1/packs": {
       "get": {
         "description": "Expose the immutable bundled starter pack without a lifecycle/install flow.",
@@ -648,6 +802,46 @@
           }
         },
         "summary": "List Packs"
+      }
+    },
+    "/api/v1/practice/attempts/{attempt_id}/model-prediction": {
+      "get": {
+        "description": "Return the model's post-answer opinion; it requires an answered or skipped attempt.",
+        "operationId": "get_model_prediction_api_v1_practice_attempts__attempt_id__model_prediction_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attempt_id",
+            "required": true,
+            "schema": {
+              "title": "Attempt Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelPredictionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Model Prediction"
       }
     },
     "/api/v1/practice/rounds/next": {

@@ -14,8 +14,8 @@ import { AsgiBridge } from "./test/asgiBridge";
 const bridges: AsgiBridge[] = [];
 const dataDirs: string[] = [];
 
-async function startApi(dataDir: string) {
-  const bridge = await AsgiBridge.start(dataDir);
+async function startApi(dataDir: string, env: Record<string, string> = {}) {
+  const bridge = await AsgiBridge.start(dataDir, env);
   bridges.push(bridge);
   vi.stubGlobal("fetch", bridge.fetch);
   return bridge;
@@ -51,6 +51,7 @@ describe("App with the real API and SQLite", () => {
     }
     expect(within(attribution).getByRole("link", { name: "CC0-1.0" })).toHaveAttribute("href", "https://creativecommons.org/publicdomain/zero/1.0/");
     expect(pageText()).not.toMatch(/Slovakia|Authored teaching target|Answer:/);
+    expect(screen.queryByRole("button", { name: "Compare with model" })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Reveal optional clue" }));
     expect(await screen.findByText(/Read both panels/)).toBeInTheDocument();
@@ -65,6 +66,13 @@ describe("App with the real API and SQLite", () => {
     expect(screen.getByLabelText("Answer citation")).toHaveTextContent("cleared");
     expect(screen.getByText(`Next review of starter-place-01 on ${utcDate(1)} (interval 1 day, ease 2.18).`)).toBeInTheDocument();
 
+    // The placeholder model's opinion is only offered after the answer, clearly labelled.
+    fireEvent.click(await screen.findByRole("button", { name: "Compare with model" }));
+    const comparison = await screen.findByLabelText("Model comparison");
+    expect(comparison).toHaveTextContent("dummy-placeholder 0.1.0 (placeholder, not real inference)");
+    expect(within(comparison).getAllByRole("listitem").map((item) => item.textContent)).toEqual(["CH · 27%", "PT · 19%", "BG · 13%"]);
+    expect(screen.getByText("SK")).toBeInTheDocument();
+
     // The report is stored against this exact attempt in SQLite and leaves the answer untouched.
     fireEvent.click(screen.getByRole("button", { name: "Report issue" }));
     expect(await screen.findByRole("status")).toHaveTextContent("Report saved locally for this attempt");
@@ -73,6 +81,8 @@ describe("App with the real API and SQLite", () => {
       .toEqual([{ round_id: "starter-place-01", is_correct: 0, reported_issue: 1 }]);
     expect(database.prepare("SELECT round_id, reported_issue FROM learner_feedback").all())
       .toEqual([{ round_id: "starter-place-01", reported_issue: 1 }]);
+    expect(database.prepare("SELECT round_id, model_id FROM learner_model_predictions").all())
+      .toEqual([{ round_id: "starter-place-01", model_id: "dummy-placeholder" }]);
 
     // Retry keeps the same round and clears the attempt; an uncertain correct answer is scored.
     fireEvent.click(screen.getByRole("button", { name: "Retry same round" }));
@@ -108,6 +118,16 @@ describe("App with the real API and SQLite", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Practice this round" }));
     expect(await screen.findByRole("img", { name: /place-name panel reading BRATISLAVA/ })).toBeInTheDocument();
     expect(pageText()).not.toMatch(/Slovakia|Answer:/);
+  }, 60_000);
+
+  it("runs practice without a model when the model is switched off", async () => {
+    await startApi(freshDataDir(), { GEO_COMPANION_MODEL: "none" });
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Skip" }));
+    expect(await screen.findByText("Skipped.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Compare with model" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   }, 60_000);
 
   it("shows the real API failure instead of fabricating a round", async () => {

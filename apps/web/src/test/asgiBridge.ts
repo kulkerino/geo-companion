@@ -27,10 +27,10 @@ export class AsgiBridge {
 
   private constructor(private readonly child: ChildProcessWithoutNullStreams) {}
 
-  static async start(dataDir: string): Promise<AsgiBridge> {
+  static async start(dataDir: string, env: Record<string, string> = {}): Promise<AsgiBridge> {
     const child = spawn("uv", ["run", "python", "packages/api/scripts/asgi_stdio_bridge.py"], {
       cwd: repositoryRoot,
-      env: { ...process.env, GEO_COMPANION_DATA_DIR: dataDir },
+      env: { ...process.env, GEO_COMPANION_DATA_DIR: dataDir, ...env },
     });
     const bridge = new AsgiBridge(child);
     let stderr = "";

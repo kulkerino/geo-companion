@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import {
   GeoCompanionApiClient,
   type Attribution,
+  type ModelInfo,
+  type ModelPredictionResult,
   type PracticeAnswerResult,
   type PracticeRoundPublic,
   type StudyProgress,
@@ -53,6 +55,24 @@ function Schedule({ progress }: { progress: StudyProgress }) {
   );
 }
 
+function ModelComparison({ prediction }: { prediction: ModelPredictionResult }) {
+  const { model } = prediction;
+  return (
+    <div className="model" aria-label="Model comparison">
+      <p className="model-name">
+        Model opinion: {model.model_id} {model.version}{model.is_placeholder ? " (placeholder, not real inference)" : ""}
+      </p>
+      <p className="origin">{model.description}</p>
+      {prediction.abstained ? <p>The model abstained: it was not confident enough to guess.</p> : (
+        <ol>
+          {prediction.candidates.map((candidate) => <li key={candidate.country_code}>{candidate.country_code} · {Math.round(candidate.confidence * 100)}%</li>)}
+        </ol>
+      )}
+      <p className="origin">Model output is stored separately and never changes the authored answer.</p>
+    </div>
+  );
+}
+
 function outcome(reveal: PracticeAnswerResult) {
   if (reveal.submission.skipped) return "Skipped.";
   const confidence = reveal.submission.uncertain ? " (marked uncertain)" : "";
@@ -71,6 +91,8 @@ function App() {
   const [review, setReview] = useState<StudyProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [model, setModel] = useState<ModelInfo | null>(null);
+  const [prediction, setPrediction] = useState<ModelPredictionResult | null>(null);
 
   const startRound = (next: PracticeRoundPublic) => {
     setRound(next);
@@ -78,6 +100,7 @@ function App() {
     setReveal(null);
     setGuess("");
     setNotice(null);
+    setPrediction(null);
   };
 
   const run = async (action: () => Promise<void>) => {
@@ -96,6 +119,8 @@ function App() {
 
   useEffect(() => {
     void loadNextRound();
+    // The model is optional: if its status cannot be read, practice simply runs without it.
+    void client.model_status_api_v1_models_get().then((status) => setModel(status.active ?? null), () => setModel(null));
     // Only the first render loads a round; later loads are explicit learner actions.
   }, []);
 
@@ -127,6 +152,10 @@ function App() {
       reported_issue: reportedIssue,
     });
     setNotice(reportedIssue ? "Report saved locally for this attempt; it does not replace the authored answer." : "Feedback saved locally.");
+  });
+
+  const compareWithModel = (result: PracticeAnswerResult) => run(async () => {
+    setPrediction(await client.get_model_prediction_api_v1_practice_attempts__attempt_id__model_prediction_get(result.attempt_id));
   });
 
   const retrySameRound = () => {
@@ -168,8 +197,10 @@ function App() {
             <p className="origin">Answer origin: {reveal.answer.answer_origin}. Your feedback and reports are stored separately and never change it.</p>
             {reveal.answer.citations.map((citation, index) => <AttributionDetails key={index} attribution={citation} label="Answer citation" />)}
             {reveal.study_progress && <Schedule progress={reveal.study_progress} />}
+            {prediction && <ModelComparison prediction={prediction} />}
             {notice && <p className="notice" role="status">{notice}</p>}
             <div className="actions">
+              {model && !prediction && <button type="button" disabled={pending} onClick={() => void compareWithModel(reveal)}>Compare with model</button>}
               <button type="button" disabled={pending} onClick={() => void sendFeedback(reveal, false)}>Useful</button>
               <button type="button" disabled={pending} onClick={() => void sendFeedback(reveal, true)}>Report issue</button>
               <button type="button" disabled={pending} onClick={retrySameRound}>Retry same round</button>

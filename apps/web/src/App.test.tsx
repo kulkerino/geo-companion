@@ -42,6 +42,7 @@ describe("App", () => {
     let answers = 0;
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
       if (String(input).endsWith("/practice/rounds/next")) return json(round("round-1"));
+      if (!String(input).endsWith("/answers")) return json({ active: null });
       answers += 1;
       return new Promise<Response>(() => {});
     }));

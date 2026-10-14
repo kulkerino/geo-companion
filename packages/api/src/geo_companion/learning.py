@@ -11,6 +11,8 @@ from pathlib import Path
 
 from geo_companion.contracts import (
     Feedback,
+    ModelPredictionResult,
+    ModelStatus,
     PracticeAnswerResult,
     PracticeAnswerSubmission,
     PracticeClue,
@@ -19,6 +21,7 @@ from geo_companion.contracts import (
     StudyProgress,
     StudyReview,
 )
+from geo_companion.models import PredictionProvider
 from geo_companion.starter_pack import PRACTICE_ROUNDS
 
 # SM-2 quality per practice outcome. Uncertainty on a correct answer lowers the quality so the
@@ -34,8 +37,9 @@ class LearningService:
 
     learner_id = "local-learner"
 
-    def __init__(self, database_path: Path) -> None:
+    def __init__(self, database_path: Path, provider: PredictionProvider | None = None) -> None:
         self.database_path = database_path
+        self.provider = provider
         self.database_path.parent.mkdir(parents=True, exist_ok=True)
         self._initialize()
 
@@ -64,6 +68,11 @@ class LearningService:
                     submission_json TEXT NOT NULL, is_correct INTEGER NOT NULL,
                     answer_origin TEXT NOT NULL, reported_issue INTEGER NOT NULL DEFAULT 0,
                     created_at TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS learner_model_predictions (
+                    attempt_id TEXT PRIMARY KEY, learner_id TEXT NOT NULL, round_id TEXT NOT NULL,
+                    model_id TEXT NOT NULL, model_version TEXT NOT NULL,
+                    prediction_json TEXT NOT NULL, created_at TEXT NOT NULL
                 );
                 CREATE TABLE IF NOT EXISTS learner_feedback (
                     feedback_id TEXT PRIMARY KEY, learner_id TEXT NOT NULL, attempt_id TEXT,
@@ -177,6 +186,57 @@ class LearningService:
                     datetime.now(UTC).isoformat(),
                 ),
             )
+
+    def model_status(self) -> ModelStatus:
+        return ModelStatus(active=None if self.provider is None else self.provider.info)
+
+    def model_prediction(self, attempt_id: str) -> ModelPredictionResult:
+        """Return the model's opinion for an answered attempt, computing and storing it once.
+
+        Requiring an existing attempt keeps model output strictly post-answer: there is no way
+        to ask for a prediction on a round the learner has not answered or skipped yet.
+        """
+        if self.provider is None:
+            raise LookupError("No local model is enabled.")
+        info = self.provider.info
+        with self._connect() as connection:
+            attempt = connection.execute(
+                "SELECT round_id FROM learner_practice_attempts "
+                "WHERE attempt_id = ? AND learner_id = ?",
+                (attempt_id, self.learner_id),
+            ).fetchone()
+            if attempt is None:
+                raise KeyError(attempt_id)
+            stored = connection.execute(
+                "SELECT prediction_json FROM learner_model_predictions "
+                "WHERE attempt_id = ? AND model_id = ? AND model_version = ?",
+                (attempt_id, info.model_id, info.version),
+            ).fetchone()
+        if stored is not None:
+            return ModelPredictionResult.model_validate_json(stored["prediction_json"])
+        round_id = attempt["round_id"]
+        candidates = self.provider.predict(self.round_public(round_id))
+        result = ModelPredictionResult(
+            attempt_id=attempt_id,
+            round_id=round_id,
+            model=info,
+            candidates=candidates,
+            abstained=not candidates,
+        )
+        with self._connect() as connection:
+            connection.execute(
+                "INSERT OR REPLACE INTO learner_model_predictions VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (
+                    attempt_id,
+                    self.learner_id,
+                    round_id,
+                    info.model_id,
+                    info.version,
+                    result.model_dump_json(),
+                    datetime.now(UTC).isoformat(),
+                ),
+            )
+        return result
 
     def attempt_history(self, round_id: str) -> list[dict[str, object]]:
         with self._connect() as connection:

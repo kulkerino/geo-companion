@@ -44,6 +44,33 @@ export interface HTTPValidationError {
   detail?: Array<ValidationError>;
 }
 
+export interface ModelCandidate {
+  country_code: string;
+  confidence: number;
+}
+
+export interface ModelInfo {
+  model_id: string;
+  version: string;
+  runtime: "dummy" | "onnx" | "pytorch";
+  is_placeholder: boolean;
+  description: string;
+  required_for_learning?: boolean;
+}
+
+export interface ModelPredictionResult {
+  attempt_id: string;
+  round_id: string;
+  model: ModelInfo;
+  candidates: Array<ModelCandidate>;
+  abstained: boolean;
+  origin?: string;
+}
+
+export interface ModelStatus {
+  active?: ModelInfo | null;
+}
+
 export interface PackSummary {
   pack_id: string;
   version: string;
@@ -150,9 +177,21 @@ export class GeoCompanionApiClient {
     );
   }
 
+  async model_status_api_v1_models_get(): Promise<ModelStatus> {
+    return this.request<ModelStatus>(
+      "GET", "/api/v1/models", {}, undefined,
+    );
+  }
+
   async list_packs_api_v1_packs_get(): Promise<PacksResponse> {
     return this.request<PacksResponse>(
       "GET", "/api/v1/packs", {}, undefined,
+    );
+  }
+
+  async get_model_prediction_api_v1_practice_attempts__attempt_id__model_prediction_get(attempt_id: string): Promise<ModelPredictionResult> {
+    return this.request<ModelPredictionResult>(
+      "GET", "/api/v1/practice/attempts/{attempt_id}/model-prediction", { "attempt_id": String(attempt_id) }, undefined,
     );
   }
 

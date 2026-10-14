@@ -38,6 +38,11 @@ GEO_COMPANION_DATA_DIR=/tmp/geo-companion-clean-start \
   uv run uvicorn geo_companion.main:app --host 127.0.0.1 --port 8000
 ```
 
+After answering a round you can press **Compare with model** to see the local model's opinion.
+For now this is a clearly labelled placeholder (`dummy-placeholder`) that makes no real
+inference; it exists so a real local model can be swapped in later without changing the app.
+Start FastAPI with `GEO_COMPANION_MODEL=none` to run without any model.
+
 No request leaves the laptop: the bundled diagrams are original teaching assets,
 not Street View or other captured imagery. They are rendered deterministically by
 `packages/api/scripts/generate_starter_diagrams.py` (use `--check` to detect drift).

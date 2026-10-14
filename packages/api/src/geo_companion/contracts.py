@@ -190,6 +190,53 @@ class ModelPrediction(ContractModel):
     origin: Literal[AnswerOrigin.MODEL_PREDICTION] = AnswerOrigin.MODEL_PREDICTION
 
 
+class ModelInfo(ContractModel):
+    """Identity of the local prediction provider; learning never requires one."""
+
+    model_id: str = Field(min_length=1)
+    version: str = Field(pattern=r"^\d+\.\d+\.\d+$")
+    runtime: Literal["dummy", "onnx", "pytorch"]
+    is_placeholder: bool
+    description: str = Field(min_length=1)
+    required_for_learning: Literal[False] = False
+
+
+class ModelStatus(ContractModel):
+    """Which provider is enabled; ``active`` is null when the app runs without a model."""
+
+    active: ModelInfo | None = None
+
+
+class ModelCandidate(ContractModel):
+    country_code: str = Field(pattern=r"^[A-Z]{2}$")
+    confidence: float = Field(gt=0, le=1)
+
+
+class ModelPredictionResult(ContractModel):
+    """A post-answer model opinion for one attempt; never source truth and never a hint."""
+
+    attempt_id: str = Field(min_length=1)
+    round_id: str = Field(min_length=1)
+    model: ModelInfo
+    candidates: tuple[ModelCandidate, ...] = Field(max_length=5)
+    abstained: bool
+    origin: Literal[AnswerOrigin.MODEL_PREDICTION] = AnswerOrigin.MODEL_PREDICTION
+
+    @model_validator(mode="after")
+    def candidates_are_ranked_and_consistent(self) -> ModelPredictionResult:
+        if self.abstained != (not self.candidates):
+            msg = "A prediction abstains exactly when it has no candidates."
+            raise ValueError(msg)
+        confidences = [candidate.confidence for candidate in self.candidates]
+        if confidences != sorted(confidences, reverse=True) or sum(confidences) > 1 + 1e-9:
+            msg = "Candidates must be ordered by confidence and sum to at most 1."
+            raise ValueError(msg)
+        if len({candidate.country_code for candidate in self.candidates}) != len(confidences):
+            msg = "Candidate countries must be distinct."
+            raise ValueError(msg)
+        return self
+
+
 class Feedback(ContractModel):
     attempt_id: str = Field(min_length=1)
     round_id: str = Field(min_length=1)

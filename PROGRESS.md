@@ -6,7 +6,7 @@ work that changes it; detailed evidence for each session goes in [`journal/`](jo
 **Last updated:** 2026-10-14
 **Branch:** `feature/initial-platform`
 **GitHub:** [kulkerino/geo-companion](https://github.com/kulkerino/geo-companion) (private), remote `origin`; `main` and `feature/initial-platform` pushed
-**Next step:** connect the app to a dummy model. Waiting for kulo to start it.
+**Next step:** kulo decides whether to merge PR #1 into `main`; then Task 4 (pack lifecycle).
 
 ## Task status
 
@@ -15,7 +15,7 @@ work that changes it; detailed evidence for each session goes in [`journal/`](jo
 | 1. Repository and audit foundation | done, reviewed | `411dbfe`, `ade9730`, `6b1b241` | [2026-10-05](journal/2026-10-05-task-1-repository-audit-foundation.md) |
 | 2. Content and application contracts | done, reviewed | `93abbf1`, `70167f1` | [2026-10-05](journal/2026-10-05-task-2-content-application-contracts.md) |
 | 3. Standalone offline Open Practice slice | done, self-reviewed | `0ac1ed0`, `7e61cef`, `a6970c1` | [2026-10-14](journal/2026-10-14-task-3-standalone-offline-vertical-slice.md) |
-| Dummy-model wiring | next, not started | — | — |
+| Dummy-model wiring (interim) | done, self-reviewed | see journal | [2026-10-14](journal/2026-10-14-dummy-model-wiring.md) |
 | 4. Pack lifecycle and source tooling | planned | — | — |
 | 5. Curriculum pipeline | planned | — | — |
 | 6. Optional local model | planned | — | — |
@@ -32,6 +32,8 @@ The full plan is in
   marked uncertain, or skip; the answer and explanation are revealed afterwards. You can
   report a problem with an attempt, retry the same round, or move to the next round.
 - SM-2 study review ordered by due date, with "practice this round" from the review screen.
+- After answering, "Compare with model" shows a clearly labelled placeholder model's opinion
+  (`dummy-placeholder`, no real inference). `GEO_COMPANION_MODEL=none` runs without a model.
 - Everything runs locally: FastAPI on `127.0.0.1:8000`, Vite on `127.0.0.1:5173`, and SQLite
   in the per-user application-data directory (never inside this folder).
 
@@ -44,12 +46,13 @@ The full plan is in
 | 2026-10-14 | Independent review only at big milestones; a self-review pass otherwise | Task 3 journal |
 | 2026-10-14 | Project moved to `~/Documents/geolearn` (the history moved with it) | this file |
 | 2026-10-14 | Private GitHub repo `kulkerino/geo-companion` created as `origin` | journal 2026-10-14 move entry |
+| 2026-10-14 | Model output is post-answer only, labelled, stored apart from truth; dummy provider first | journal 2026-10-14 dummy model |
 
 ## Known gaps
 
-- CI has not run on GitHub yet: the workflow runs on pull requests and on pushes to `main`, and
-  `main` only holds the plan commit. Opening a pull request from `feature/initial-platform`, or
-  merging it, will run CI.
+- PR [#1](https://github.com/kulkerino/geo-companion/pull/1) (`feature/initial-platform` →
+  `main`) is open and runs CI; it is not merged.
+- The dummy model is a placeholder only; real local models are Task 6.
 - The starter pack teaches one deliberately easy cue (a named city) and contains no real
   imagery.
 - Storage cleanup for Task 4: the database tables from the original migration are still

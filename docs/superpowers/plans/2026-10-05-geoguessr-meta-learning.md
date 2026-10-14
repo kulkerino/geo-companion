@@ -72,6 +72,13 @@
 - [ ] Run the complete offline test suite and clean-start smoke test.
 - [ ] Journal and commit.
 
+### Interim step (2026-10-14): dummy model wiring
+
+> Requested by kulo before Task 4. A `PredictionProvider` boundary with a deterministic
+> `DummyProvider` (no inference, no download) and a post-answer-only model-comparison path
+> through API, SQLite, and UI. Task 6 replaces the provider with a real optional local model;
+> its abstention, manifest, benchmark, and evaluation requirements still apply then.
+
 ### Task 4: Pack lifecycle and source tooling
 
 **Files:** Add staging/verification/activation services, atomic filesystem operations, rollback/removal/storage APIs, attribution UI, CLI validation, and tests.
