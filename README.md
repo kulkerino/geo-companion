@@ -5,6 +5,12 @@ geography clues without depending on GeoGuessr. The repository is also an
 Obsidian vault: source, decisions, and reproducibility metadata are tracked;
 runtime learner data, downloaded packs, and model binaries are not.
 
+## Progress and documentation
+
+- [`PROGRESS.md`](PROGRESS.md) shows the current status, the next step, and the decision log.
+- [`journal/`](journal/) holds a dated entry for each working session, with commands and results.
+- [`CLAUDE.md`](CLAUDE.md) is the working agreement: every session updates both of the above.
+
 ## Native development
 
 The committed runtime pins are Python 3.12 and Node 24. The host may use a
