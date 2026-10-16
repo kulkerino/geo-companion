@@ -6,11 +6,10 @@ Okolo modelu je postavený tréning hádania krajín a preteky s modelom.
 | | |
 |---|---|
 | **Názov projektu** | Geo Companion |
-| **Autor** | kulo *(doplniť celé meno)* |
-| **Trieda** | *(doplniť)* |
+| **Autor** | Adam Kovac & Ondrej Kocian |
+| **Trieda** | *BTL* |
 | **Vyučujúci** | Roman Janega |
 | **Školský rok** | 2026/2027 |
-| **Termín odovzdania** | február 2027 |
 
 ## Cieľ projektu
 
