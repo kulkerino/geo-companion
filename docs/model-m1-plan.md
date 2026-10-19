@@ -1,7 +1,8 @@
 # Model M1 — dataset and from-scratch country classifier
 
-Status: **approved** (2026-10-19: kulo approved the merge, OSV-5M and the download). M1a and
-M1d are done; M1b is in progress. Originally drafted 2026-10-16. Nothing in this plan downloads data
+Status: **approved** (2026-10-19: kulo approved the merge, OSV-5M and the download). M1a, M1b and
+M1d are done; M1c runs on kulo's RTX 3060 PC via
+[`runbook-m1c-rtx-3060.md`](runbook-m1c-rtx-3060.md). Originally drafted 2026-10-16. Nothing in this plan downloads data
 or installs packages until kulo approves it in chat. This plan carries out the model part of
 Task 6 (and the training-data part of Task 5) in the
 [main plan](superpowers/plans/2026-10-05-geoguessr-meta-learning.md).
@@ -21,7 +22,7 @@ under the same provider boundary as today (`geo_companion/models.py`).
 | 2 | Dataset: OpenStreetView-5M (OSV-5M)? | yes |
 | 3 | First download: about 3 train shards plus the test split, roughly 15 GB (an estimate) | yes |
 | 4 | Add PyTorch, torchvision, onnx and onnxruntime as an optional `training` group | yes |
-| 5 | Which GPU is in the Windows machine? Its VRAM sets the batch size and resolution | — |
+| 5 | Which GPU is in the Windows machine? Its VRAM sets the batch size and resolution | RTX 3060 (kulo, 2026-10-19) |
 
 ## Dataset: OpenStreetView-5M
 
@@ -73,7 +74,8 @@ images present. The first fetch is 10 files, 20.0 GB (each shard holds 50,000 im
   Augmentation is random resized crop and colour jitter, with no horizontal flip, because
   flipping reverses driving side and mirrors text. Training uses class-balanced sampling, with
   a fixed seed and the configuration logged.
-- **Calibration:** a temperature fitted on val.
+- **Calibration:** a temperature fitted on val, with val reweighted to the training
+  sampler's square-root class prior (`--calibration sqrt`, added 2026-10-19).
 - **Abstention:** the threshold on top-1 probability is chosen on val to reach a target
   precision. Abstention is then checked on test, never tuned there.
 - **Hardware:** the laptop (Core Ultra 7 155H, Intel Arc, 14 GB RAM) runs tests and a short

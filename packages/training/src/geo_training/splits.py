@@ -43,3 +43,14 @@ def select_classes(samples: Sequence[Sample], min_count: int) -> tuple[str, ...]
     """Countries with at least ``min_count`` training images, in sorted order."""
     counts = Counter(sample.country for sample in samples)
     return tuple(sorted(country for country, count in counts.items() if count >= min_count))
+
+
+def deterministic_subset(samples: Sequence[Sample], limit: int | None) -> list[Sample]:
+    """The same ``limit`` samples every time, chosen by a hash of the image ID."""
+    if limit is None or limit >= len(samples):
+        return list(samples)
+
+    def rank(sample: Sample) -> bytes:
+        return hashlib.sha256(f"geo-companion-subset:{sample.image_id}".encode()).digest()
+
+    return sorted(samples, key=rank)[:limit]

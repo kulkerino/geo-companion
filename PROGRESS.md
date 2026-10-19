@@ -6,7 +6,7 @@ work that changes it; detailed evidence for each session goes in [`journal/`](jo
 **Last updated:** 2026-10-19
 **Branch:** `feature/model-m1` (Tasks 1–3 are merged into `main`)
 **GitHub:** [kulkerino/geo-companion](https://github.com/kulkerino/geo-companion) (private), remote `origin`; branches `main`, `feature/model-m1`, and the school branch `rocnikovy-projekt`
-**Next step:** M1c, real training on the Windows RTX machine (kulo: which GPU?), with a calibration split that matches the test set.
+**Next step:** M1c on kulo's RTX 3060 PC, following [`docs/runbook-m1c-rtx-3060.md`](docs/runbook-m1c-rtx-3060.md); then the independent M1 review.
 
 ## Task status
 
@@ -20,7 +20,8 @@ work that changes it; detailed evidence for each session goes in [`journal/`](jo
 | Model M1a: training pipeline on synthetic images | done, self-reviewed | see journal | [2026-10-19](journal/2026-10-19-model-m1a-pipeline.md) |
 | Model M1d: ONNX provider in the app | done, self-reviewed | see journal | [2026-10-19](journal/2026-10-19-model-m1d-onnx-provider.md) |
 | Model M1b: first real data and laptop smoke run | done, self-reviewed | see journal | [2026-10-19](journal/2026-10-19-model-m1b-first-real-data.md) |
-| Model M1c: real training on the RTX machine | planned, needs the GPU model | — | — |
+| Model M1c prep: calibration fix and RTX 3060 runbook | done, self-reviewed | see journal | [2026-10-19](journal/2026-10-19-model-m1c-prep.md) |
+| Model M1c: real training on the RTX 3060 PC | ready to run by hand | — | — |
 | 4. Pack lifecycle and source tooling | planned | — | — |
 | 5. Curriculum pipeline | planned | — | — |
 | 6. Optional local model | planned | — | — |
@@ -55,6 +56,7 @@ The full plan is in
 | 2026-10-16 | Model work moved ahead of Task 4 (kulo: the model is the core); OSV-5M proposed, pending approval | `docs/model-m1-plan.md` |
 | 2026-10-19 | PR #1 merged into `main` (kulo: "merge"); `feature/initial-platform` deleted | journal 2026-10-19 M1d |
 | 2026-10-19 | OSV-5M approved and ledger `cleared`; 3 train shards + full test (20 GB) fetched | journal 2026-10-19 M1b |
+| 2026-10-19 | Training PC GPU is an RTX 3060; calibration reweights val to the sampler's sqrt prior | journal 2026-10-19 M1c prep |
 | 2026-10-19 | PyTorch, onnx, onnxruntime added as the optional `training` group; training tests skip without it | journal 2026-10-19 M1a |
 
 ## Known gaps
@@ -63,9 +65,10 @@ The full plan is in
   exported model, but none is trained yet, and it abstains on starter rounds (SVG diagrams,
   no photo). Stored predictions are keyed by model id and version, so bump the version on
   every retrain.
-- The laptop has no CUDA GPU, so real training needs the Windows RTX machine.
-- Smoke run: temperature fitted on val made test calibration worse (val is 25% US, test 11%);
-  M1c needs a better calibration split.
+- The laptop has no CUDA GPU, so real training runs on the RTX 3060 PC. Nothing has run on
+  Windows or a GPU yet.
+- Calibration now uses a sqrt class-weighted val (smoke model: test ECE 0.090 → 0.023), but
+  that was checked only on a weak smoke model; M1c must confirm it.
 - App rounds are diagrams, not photos, so a photo model will be out of distribution there until photo rounds or upload exist.
 - The starter pack teaches one deliberately easy cue (a named city) and contains no real
   imagery.

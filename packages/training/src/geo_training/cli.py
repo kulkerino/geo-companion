@@ -29,7 +29,7 @@ from geo_training.fetch import (
 )
 from geo_training.ledger import load_record, require_cleared
 from geo_training.metadata import read_samples
-from geo_training.splits import select_classes, split_train_val
+from geo_training.splits import deterministic_subset, select_classes, split_train_val
 
 
 def _output_dir(value: str | None, run_name: str) -> Path:
@@ -46,6 +46,15 @@ def _dataset_dir(value: str | None) -> Path:
         msg = f"Refusing to store datasets inside the repository: {path}"
         raise SystemExit(msg)
     return path
+
+
+def _extracted_marker(root: Path, path: str, sha256: str) -> int | None:
+    """Image count of an archive that was unpacked and deleted, if its hash still matches."""
+    marker = root / "raw" / f"{path}.extracted.json"
+    if not marker.is_file():
+        return None
+    record = json.loads(marker.read_text(encoding="utf-8"))
+    return int(record["images"]) if record.get("sha256") == sha256 else None
 
 
 def _fetch(args: argparse.Namespace) -> int:
@@ -65,6 +74,8 @@ def _fetch(args: argparse.Namespace) -> int:
     total = sum(published[path].size for path in wanted)
     print(f"Fetching {len(wanted)} files, {total / 1e9:.1f} GB, into {root}", file=sys.stderr)
     for path in wanted:
+        if _extracted_marker(root, path, published[path].sha256) is not None:
+            continue  # unpacked earlier and its archive deleted
         download(
             published[path],
             f"{args.base_url}/resolve/main/{path}",
@@ -77,7 +88,21 @@ def _fetch(args: argparse.Namespace) -> int:
         if not paths:
             continue
         image_dir = root / "images" / split
-        extracted = sum(extract_images(root / "raw" / path, image_dir) for path in paths)
+        extracted = 0
+        for path in paths:
+            marker = _extracted_marker(root, path, published[path].sha256)
+            if marker is not None:
+                extracted += marker
+                continue
+            count = extract_images(root / "raw" / path, image_dir)
+            extracted += count
+            if args.delete_archives:
+                marker_path = root / "raw" / f"{path}.extracted.json"
+                marker_path.write_text(
+                    json.dumps({"sha256": published[path].sha256, "images": count}),
+                    encoding="utf-8",
+                )
+                (root / "raw" / path).unlink()
         (root / "metadata").mkdir(exist_ok=True)
         rows = filter_metadata(
             root / "raw" / f"{split}.csv", image_dir, root / "metadata" / f"{split}.csv"
@@ -107,7 +132,12 @@ def _stats(args: argparse.Namespace) -> int:
 def _run(args: argparse.Namespace) -> int:
     import torch
 
-    from geo_training.calibration import choose_threshold, fit_temperature
+    from geo_training.calibration import (
+        CALIBRATION_POWERS,
+        choose_threshold,
+        class_weights,
+        fit_temperature,
+    )
     from geo_training.evaluate import report
     from geo_training.export import export_onnx, write_manifest
     from geo_training.train import SampleDataset, TrainConfig, predict_logits, resolve_device
@@ -115,7 +145,9 @@ def _run(args: argparse.Namespace) -> int:
 
     record = require_cleared(load_record(Path(args.ledger)))
     out_dir = _output_dir(args.out, args.run_name)
-    samples = list(read_samples(Path(args.metadata), Path(args.images)))
+    samples = deterministic_subset(
+        list(read_samples(Path(args.metadata), Path(args.images))), args.max_images
+    )
     train_samples, val_samples = split_train_val(samples, args.val_fraction)
     classes = select_classes(train_samples, args.min_count)
     if len(classes) < 2:
@@ -135,9 +167,10 @@ def _run(args: argparse.Namespace) -> int:
 
     val_set = SampleDataset(val_samples, classes, config.image_size, False, config.seed)
     val_logits, val_labels = predict_logits(model, val_set, config.batch_size, device, args.workers)
-    temperature = fit_temperature(val_logits, val_labels)
+    weights = class_weights(val_labels, CALIBRATION_POWERS[args.calibration])
+    temperature = fit_temperature(val_logits, val_labels, weights)
     abstention = choose_threshold(
-        (val_logits / temperature).softmax(1), val_labels, args.target_precision
+        (val_logits / temperature).softmax(1), val_labels, args.target_precision, weights
     )
     majority = Counter(s.country for s in train_samples if s.country in classes).most_common(1)
     majority_country = majority[0][0]
@@ -163,7 +196,7 @@ def _run(args: argparse.Namespace) -> int:
     parity = export_onnx(model, config.image_size, artifact)
     if parity > 1e-3:
         raise SystemExit(f"ONNX output differs from PyTorch by {parity:.2e}; not exporting.")
-    summary = reports.get("test", reports["val"])
+    summary = {**reports.get("test", reports["val"]), "calibration": args.calibration}
     write_manifest(
         model_id=args.model_id,
         version=args.version,
@@ -197,6 +230,11 @@ def build_parser() -> argparse.ArgumentParser:
     fetch.add_argument("--train-shards", default="0-2", help='e.g. "0-2" or "0,5"; "" for none')
     fetch.add_argument("--test-shards", default="0-4", help='e.g. "0-4"; "" for none')
     fetch.add_argument("--data-dir", help="dataset directory (default: application data)")
+    fetch.add_argument(
+        "--delete-archives",
+        action="store_true",
+        help="delete each image zip once unpacked (saves ~2.5 GB per shard)",
+    )
     fetch.add_argument("--base-url", default=OSV5M_BASE_URL, help=argparse.SUPPRESS)
     fetch.set_defaults(handler=_fetch)
 
@@ -218,6 +256,15 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--batch-size", type=int, default=128)
     run.add_argument("--learning-rate", type=float, default=2e-3)
     run.add_argument("--target-precision", type=float, default=0.8)
+    run.add_argument(
+        "--max-images", type=int, help="use a fixed hashed subset of the train images (smoke runs)"
+    )
+    run.add_argument(
+        "--calibration",
+        choices=("sqrt", "balanced", "natural"),
+        default="sqrt",
+        help="class weighting of val for temperature and threshold; sqrt matches the sampler",
+    )
     run.add_argument("--seed", type=int, default=0)
     run.add_argument("--workers", type=int, default=4)
     run.add_argument("--device", default="auto")

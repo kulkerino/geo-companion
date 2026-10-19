@@ -86,3 +86,17 @@ def test_select_classes_applies_minimum_count() -> None:
     samples = [_sample(str(i), 0, 0, "CZ" if i < 5 else "JP", None) for i in range(7)]
     assert select_classes(samples, 3) == ("CZ",)
     assert select_classes(samples, 2) == ("CZ", "JP")
+
+
+def test_deterministic_subset_is_stable_and_bounded() -> None:
+    from geo_training.splits import deterministic_subset
+
+    samples = [
+        Sample(str(i), Path(f"{i}.jpg"), 0.0, 0.0, "CZ", None) for i in range(100)
+    ]
+    first = deterministic_subset(samples, 10)
+
+    assert len(first) == 10
+    assert first == deterministic_subset(list(reversed(samples)), 10)
+    assert deterministic_subset(samples, None) == samples
+    assert deterministic_subset(samples, 500) == samples

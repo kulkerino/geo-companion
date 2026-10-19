@@ -92,3 +92,37 @@ def test_shard_selection() -> None:
     assert parse_shards("5, 0-1") == [0, 1, 5]
     assert parse_shards("") == []
     assert shard_paths("test", [0, 4]) == ["images/test/00.zip", "images/test/04.zip"]
+
+
+def test_fetch_command_unpacks_deletes_archives_and_does_not_refetch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from conftest import write_ledger
+    from geo_training import cli
+
+    repository = tmp_path / "hub"
+    files = repository / "resolve" / "main"
+    (files / "images" / "train").mkdir(parents=True)
+    with zipfile.ZipFile(files / "images" / "train" / "00.zip", "w") as bundle:
+        bundle.writestr("00/111.jpg", b"a")
+        bundle.writestr("00/222.jpg", b"b")
+    (files / "train.csv").write_text("id,latitude,longitude,country\n111,1,2,CZ\n999,3,4,JP\n")
+    remote = {
+        name: published(files / name, name) for name in ("images/train/00.zip", "train.csv")
+    }
+    monkeypatch.setattr(cli, "list_remote_files", lambda base_url: remote)
+    data = tmp_path / "data"
+    argv = [
+        "fetch", "--ledger", str(write_ledger(tmp_path / "ledger.json", "quarantined")),
+        "--train-shards", "0", "--test-shards", "", "--data-dir", str(data),
+        "--base-url", repository.as_uri(), "--delete-archives",
+    ]  # fmt: skip
+
+    assert cli.main(argv) == 0
+    assert cli.main(argv) == 0
+
+    assert sorted(p.name for p in (data / "images" / "train").iterdir()) == ["111.jpg", "222.jpg"]
+    assert not (data / "raw" / "images" / "train" / "00.zip").exists()
+    assert (data / "raw" / "images" / "train" / "00.zip.extracted.json").is_file()
+    assert len((data / "fetch-log.jsonl").read_text().splitlines()) == 2
+    assert (data / "metadata" / "train.csv").read_text().splitlines()[1:] == ["111,1,2,CZ"]

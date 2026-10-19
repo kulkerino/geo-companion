@@ -4,7 +4,12 @@ import random
 
 import pytest
 import torch
-from geo_training.calibration import choose_threshold, expected_calibration_error, fit_temperature
+from geo_training.calibration import (
+    choose_threshold,
+    class_weights,
+    expected_calibration_error,
+    fit_temperature,
+)
 from geo_training.model import CountryNet
 from geo_training.preprocess import eval_array, train_array
 from PIL import Image
@@ -66,3 +71,49 @@ def test_threshold_abstains_everywhere_when_target_is_unreachable() -> None:
     probs = torch.tensor([[0.9, 0.1]])
     result = choose_threshold(probs, torch.tensor([1]), target=0.5)
     assert result.threshold > 1 and result.coverage == 0.0
+
+
+def test_class_weights_reweight_val_to_the_training_prior() -> None:
+    labels = torch.tensor([0] * 16 + [1] * 4 + [2])
+
+    natural = class_weights(labels, 0.0)
+    sqrt = class_weights(labels, 0.5)
+    balanced = class_weights(labels, 1.0)
+
+    assert torch.allclose(natural, torch.ones(len(labels)))
+    for weights in (sqrt, balanced):
+        assert float(weights.mean()) == pytest.approx(1.0)
+    totals = [float(balanced[labels == c].sum()) for c in range(3)]
+    assert totals == pytest.approx([totals[0]] * 3)
+    sqrt_totals = [float(sqrt[labels == c].sum()) for c in range(3)]
+    assert sqrt_totals[0] / sqrt_totals[2] == pytest.approx(4.0)  # sqrt(16) / sqrt(1)
+
+
+def test_weighted_calibration_ignores_a_dominant_class() -> None:
+    torch.manual_seed(0)
+    # Class 0 dominates and is predicted sharply; rare classes are over-confident and wrong
+    # half the time. Natural weighting lets class 0 sharpen the temperature; balanced does not.
+    dominant = torch.zeros(900, 3)
+    dominant[:, 0] = 6.0
+    rare_logits = torch.zeros(100, 3)
+    rare_logits[:, 1] = 6.0
+    rare_labels = torch.tensor([1, 2] * 50)
+    logits = torch.cat([dominant, rare_logits])
+    labels = torch.cat([torch.zeros(900, dtype=torch.long), rare_labels])
+
+    natural = fit_temperature(logits, labels)
+    balanced = fit_temperature(logits, labels, class_weights(labels, 1.0))
+
+    assert balanced > natural
+
+
+def test_weighted_threshold_counts_coverage_by_weight() -> None:
+    probs = torch.tensor([[0.9, 0.1], [0.8, 0.2], [0.3, 0.7], [0.6, 0.4]])
+    labels = torch.tensor([0, 0, 1, 1])
+    weights = torch.tensor([0.5, 0.5, 1.5, 1.5])
+
+    abstention = choose_threshold(probs, labels, target=0.99, weights=weights)
+
+    assert abstention.threshold == pytest.approx(0.7)
+    assert abstention.coverage == pytest.approx(2.5 / 4.0)
+    assert abstention.selective_accuracy == pytest.approx(1.0)
