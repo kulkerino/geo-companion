@@ -18,7 +18,8 @@ work that changes it; detailed evidence for each session goes in [`journal/`](jo
 | Dummy-model wiring (interim) | done, self-reviewed | see journal | [2026-10-14](journal/2026-10-14-dummy-model-wiring.md) |
 | Model M1: plan | done | see journal | [2026-10-16](journal/2026-10-16-model-m1-plan.md) |
 | Model M1a: training pipeline on synthetic images | done, self-reviewed | see journal | [2026-10-19](journal/2026-10-19-model-m1a-pipeline.md) |
-| Model M1b–d: real data, RTX training, in-app provider | planned, M1b awaiting download approval | — | — |
+| Model M1d: ONNX provider in the app | done, self-reviewed | see journal | [2026-10-19](journal/2026-10-19-model-m1d-onnx-provider.md) |
+| Model M1b–c: real data and RTX training | planned, M1b awaiting download approval | — | — |
 | 4. Pack lifecycle and source tooling | planned | — | — |
 | 5. Curriculum pipeline | planned | — | — |
 | 6. Optional local model | planned | — | — |
@@ -57,7 +58,10 @@ The full plan is in
 
 - PR [#1](https://github.com/kulkerino/geo-companion/pull/1) (`feature/initial-platform` →
   `main`) is open and runs CI; it is not merged.
-- The dummy model is a placeholder only; Model M1 replaces it.
+- The dummy model is still the default. `GEO_COMPANION_MODEL=onnx:<manifest>` runs a real
+  exported model, but none is trained yet, and it abstains on starter rounds (SVG diagrams,
+  no photo). Stored predictions are keyed by model id and version, so bump the version on
+  every retrain.
 - The laptop has no CUDA GPU, so real training needs the Windows RTX machine.
 - App rounds are diagrams, not photos, so a photo model will be out of distribution there until photo rounds or upload exist.
 - The starter pack teaches one deliberately easy cue (a named city) and contains no real

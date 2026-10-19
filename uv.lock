@@ -115,6 +115,11 @@ dev = [
     { name = "pytest" },
     { name = "ruff" },
 ]
+model = [
+    { name = "numpy" },
+    { name = "onnxruntime" },
+    { name = "pillow" },
+]
 training = [
     { name = "numpy" },
     { name = "onnx" },
@@ -140,6 +145,11 @@ dev = [
     { name = "mypy", specifier = ">=1.13,<2.0" },
     { name = "pytest", specifier = ">=8.3,<9.0" },
     { name = "ruff", specifier = ">=0.8,<1.0" },
+]
+model = [
+    { name = "numpy", specifier = ">=2.0,<3.0" },
+    { name = "onnxruntime", specifier = ">=1.20,<2.0" },
+    { name = "pillow", specifier = ">=11.0,<13.0" },
 ]
 training = [
     { name = "numpy", specifier = ">=2.0,<3.0" },

@@ -11,26 +11,9 @@ from typing import Any
 import numpy as np
 import onnxruntime  # type: ignore[import-untyped]
 import torch
-from geo_companion.contracts import ModelManifest
-from pydantic import Field
+from geo_companion.contracts import CountryModelManifest
 
 from geo_training.ledger import DatasetRecord
-from geo_training.preprocess import MEAN, STD
-
-
-class CountryModelManifest(ModelManifest):
-    """Everything the app needs to run the exported model and to label its output."""
-
-    classes: tuple[str, ...] = Field(min_length=2)
-    input_size: int = Field(gt=0)
-    mean: tuple[float, float, float] = MEAN
-    std: tuple[float, float, float] = STD
-    temperature: float = Field(gt=0)
-    abstain_below: float = Field(ge=0)
-    trained_on: str = Field(min_length=1)
-    dataset_license: str = Field(min_length=1)
-    dataset_attribution: str = Field(min_length=1)
-    evaluation: dict[str, Any]
 
 
 def sha256_file(path: Path) -> str:
@@ -80,6 +63,7 @@ def write_manifest(
         model_id=model_id,
         version=version,
         artifact_hash=sha256_file(artifact),
+        artifact_file=artifact.name,
         runtime="onnx",
         classes=tuple(classes),
         input_size=input_size,
@@ -92,3 +76,6 @@ def write_manifest(
     )
     path.write_text(json.dumps(manifest.model_dump(mode="json"), indent=2), encoding="utf-8")
     return manifest
+
+
+__all__ = ["CountryModelManifest", "export_onnx", "sha256_file", "write_manifest"]

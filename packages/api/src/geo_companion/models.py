@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import os
 import random
+from pathlib import Path
 from typing import Protocol
 
 from geo_companion.contracts import ModelCandidate, ModelInfo, PracticeRoundPublic
@@ -61,11 +62,21 @@ class DummyProvider:
 
 
 def provider_from_environment() -> PredictionProvider | None:
-    """``GEO_COMPANION_MODEL`` selects the provider: ``dummy`` (default) or ``none``."""
-    choice = os.environ.get(MODEL_ENVIRONMENT_VARIABLE, "dummy").strip().lower()
+    """``GEO_COMPANION_MODEL`` selects the provider: ``dummy`` (default), ``none``, or
+    ``onnx:<manifest path>`` for a real exported model (needs the ``model`` dependency group).
+    """
+    raw = os.environ.get(MODEL_ENVIRONMENT_VARIABLE, "dummy").strip()
+    choice = raw.lower()
     if choice == "none":
         return None
     if choice == "dummy":
         return DummyProvider()
-    msg = f"{MODEL_ENVIRONMENT_VARIABLE} must be 'dummy' or 'none', not {choice!r}."
+    if choice.startswith("onnx:") and raw[len("onnx:") :].strip():
+        from geo_companion.onnx_provider import OnnxCountryProvider
+
+        return OnnxCountryProvider(Path(raw[len("onnx:") :].strip()).expanduser())
+    msg = (
+        f"{MODEL_ENVIRONMENT_VARIABLE} must be 'dummy', 'none' or 'onnx:<manifest path>', "
+        f"not {raw!r}."
+    )
     raise ValueError(msg)

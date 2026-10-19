@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from datetime import date, datetime, timedelta
 from enum import StrEnum
-from typing import Any, Literal, Self
+from typing import Annotated, Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, computed_field, model_validator
 
@@ -275,6 +275,31 @@ class ModelManifest(ContractModel):
     artifact_hash: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
     runtime: Literal["onnx", "pytorch"]
     required_for_learning: Literal[False] = False
+
+
+# ImageNet channel statistics; training and the app normalise images with the same values.
+IMAGE_MEAN = (0.485, 0.456, 0.406)
+IMAGE_STD = (0.229, 0.224, 0.225)
+
+
+class CountryModelManifest(ModelManifest):
+    """Everything the app needs to run an exported country model and to label its output.
+
+    The artifact sits next to the manifest under ``artifact_file``; a bare file name, so a
+    manifest cannot point the app at a file elsewhere on disk.
+    """
+
+    artifact_file: str = Field(default="model.onnx", pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    classes: tuple[Annotated[str, Field(pattern=r"^[A-Z]{2}$")], ...] = Field(min_length=2)
+    input_size: int = Field(gt=0)
+    mean: tuple[float, float, float] = IMAGE_MEAN
+    std: tuple[float, float, float] = IMAGE_STD
+    temperature: float = Field(gt=0)
+    abstain_below: float = Field(ge=0, le=1)
+    trained_on: str = Field(min_length=1)
+    dataset_license: str = Field(min_length=1)
+    dataset_attribution: str = Field(min_length=1)
+    evaluation: dict[str, Any]
 
 
 class ModelArtifactReference(ContractModel):

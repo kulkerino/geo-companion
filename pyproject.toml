@@ -21,6 +21,12 @@ dev = [
   "pytest>=8.3,<9.0",
   "ruff>=0.8,<1.0",
 ]
+# Running a real exported model in the app (GEO_COMPANION_MODEL=onnx:<manifest>).
+model = [
+  "numpy>=2.0,<3.0",
+  "onnxruntime>=1.20,<2.0",
+  "pillow>=11.0,<13.0",
+]
 # Model training only (Model M1). The app never imports these.
 training = [
   "numpy>=2.0,<3.0",
