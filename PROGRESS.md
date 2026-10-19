@@ -3,10 +3,10 @@
 The current state of the project at a glance. Update this file in the same commit as any
 work that changes it; detailed evidence for each session goes in [`journal/`](journal/).
 
-**Last updated:** 2026-10-16
+**Last updated:** 2026-10-19
 **Branch:** `feature/model-m1` (from `feature/initial-platform`)
 **GitHub:** [kulkerino/geo-companion](https://github.com/kulkerino/geo-companion) (private), remote `origin`; `main` and `feature/initial-platform` pushed
-**Next step:** kulo answers the decisions in [`docs/model-m1-plan.md`](docs/model-m1-plan.md) (merge PR #1, OSV-5M, download size, PyTorch, RTX GPU); then M1a, the training pipeline on synthetic fixtures.
+**Next step:** kulo confirms merging PR #1 and approves the OSV-5M download (about 15 GB) and ledger clearing; then M1b, the first real-data smoke run. Still needed: the RTX machine's GPU.
 
 ## Task status
 
@@ -16,7 +16,9 @@ work that changes it; detailed evidence for each session goes in [`journal/`](jo
 | 2. Content and application contracts | done, reviewed | `93abbf1`, `70167f1` | [2026-10-05](journal/2026-10-05-task-2-content-application-contracts.md) |
 | 3. Standalone offline Open Practice slice | done, self-reviewed | `0ac1ed0`, `7e61cef`, `a6970c1` | [2026-10-14](journal/2026-10-14-task-3-standalone-offline-vertical-slice.md) |
 | Dummy-model wiring (interim) | done, self-reviewed | see journal | [2026-10-14](journal/2026-10-14-dummy-model-wiring.md) |
-| Model M1: dataset and from-scratch training | planned, awaiting decisions | see journal | [2026-10-16](journal/2026-10-16-model-m1-plan.md) |
+| Model M1: plan | done | see journal | [2026-10-16](journal/2026-10-16-model-m1-plan.md) |
+| Model M1a: training pipeline on synthetic images | done, self-reviewed | see journal | [2026-10-19](journal/2026-10-19-model-m1a-pipeline.md) |
+| Model M1b–d: real data, RTX training, in-app provider | planned, M1b awaiting download approval | — | — |
 | 4. Pack lifecycle and source tooling | planned | — | — |
 | 5. Curriculum pipeline | planned | — | — |
 | 6. Optional local model | planned | — | — |
@@ -49,6 +51,7 @@ The full plan is in
 | 2026-10-14 | Private GitHub repo `kulkerino/geo-companion` created as `origin` | journal 2026-10-14 move entry |
 | 2026-10-14 | Model output is post-answer only, labelled, stored apart from truth; dummy provider first | journal 2026-10-14 dummy model |
 | 2026-10-16 | Model work moved ahead of Task 4 (kulo: the model is the core); OSV-5M proposed, pending approval | `docs/model-m1-plan.md` |
+| 2026-10-19 | PyTorch, onnx, onnxruntime added as the optional `training` group; training tests skip without it | journal 2026-10-19 M1a |
 
 ## Known gaps
 

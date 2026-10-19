@@ -28,3 +28,8 @@ def _is_inside_git_worktree(path: Path) -> bool:
     resolved_path = path.resolve()
     repository_root = Path(__file__).resolve().parents[4]
     return resolved_path.is_relative_to(repository_root)
+
+
+def is_inside_repository(path: Path) -> bool:
+    """True when ``path`` resolves inside this repository; runtime data must never go there."""
+    return _is_inside_git_worktree(path)
