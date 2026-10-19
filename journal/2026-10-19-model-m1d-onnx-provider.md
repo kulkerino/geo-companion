@@ -47,7 +47,14 @@ provider that runs an exported ONNX model behind the existing `PredictionProvide
   - Stored predictions are keyed by model id and version, not by artifact hash, so a retrained
     model must get a new version number.
 
+## Branch tidy-up (after kulo replied "merge")
+
+- `gh pr merge 1 --merge` → PR #1 MERGED as `7c48958` on `main`.
+- `git branch -d feature/initial-platform` and `git push origin --delete feature/initial-platform`
+  → deleted (it was an ancestor of `origin/main`). Local `main` moved to `origin/main`.
+- Kept: `feature/model-m1`, `rocnikovy-projekt` (school branch; its worktree in
+  `.worktrees/` is one commit behind `origin`, left untouched), and the `codex-workspace` backup remote.
+
 ## Follow-up
 
-M1b (OSV-5M download and ledger clearing) waits for kulo's approval; PR #1 waits for kulo's
-merge confirmation. Photo rounds or upload are the natural next app milestone.
+M1b (OSV-5M download and ledger clearing) waits for kulo's approval. Photo rounds or upload are the natural next app milestone.
