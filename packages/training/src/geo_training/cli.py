@@ -1,7 +1,9 @@
-"""``geo-train``: dataset statistics and a full train → calibrate → evaluate → export run.
+"""``geo-train``: fetch OSV-5M, dataset statistics, and a full train → calibrate → evaluate →
+export run.
 
-Nothing here downloads data. Every input path is local, the dataset ledger must be
-``cleared``, and every output goes to the application-data directory, never this repository.
+Only ``fetch`` touches the network, and only when run by hand. Training reads local paths,
+the dataset ledger must be ``cleared``, and every output goes to the application-data
+directory, never this repository.
 """
 
 from __future__ import annotations
@@ -15,6 +17,16 @@ from pathlib import Path
 
 from geo_companion.paths import application_data_dir, is_inside_repository
 
+from geo_training.fetch import (
+    OSV5M_BASE_URL,
+    download,
+    extract_images,
+    filter_metadata,
+    list_remote_files,
+    parse_shards,
+    print_progress,
+    shard_paths,
+)
 from geo_training.ledger import load_record, require_cleared
 from geo_training.metadata import read_samples
 from geo_training.splits import select_classes, split_train_val
@@ -26,6 +38,53 @@ def _output_dir(value: str | None, run_name: str) -> Path:
         msg = f"Refusing to write training output inside the repository: {path}"
         raise SystemExit(msg)
     return path
+
+
+def _dataset_dir(value: str | None) -> Path:
+    path = Path(value) if value else application_data_dir() / "datasets" / "osv5m"
+    if is_inside_repository(path):
+        msg = f"Refusing to store datasets inside the repository: {path}"
+        raise SystemExit(msg)
+    return path
+
+
+def _fetch(args: argparse.Namespace) -> int:
+    load_record(Path(args.ledger))  # the rights record must exist before anything is fetched
+    root = _dataset_dir(args.data_dir)
+    root.mkdir(parents=True, exist_ok=True)
+    published = list_remote_files(args.base_url)
+    plan = {
+        "train": shard_paths("train", parse_shards(args.train_shards)),
+        "test": shard_paths("test", parse_shards(args.test_shards)),
+    }
+    wanted = [path for paths in plan.values() for path in paths]
+    wanted += [f"{split}.csv" for split, paths in plan.items() if paths]
+    unknown = [path for path in wanted if path not in published]
+    if unknown:
+        raise SystemExit(f"Not published in the dataset: {', '.join(unknown)}")
+    total = sum(published[path].size for path in wanted)
+    print(f"Fetching {len(wanted)} files, {total / 1e9:.1f} GB, into {root}", file=sys.stderr)
+    for path in wanted:
+        download(
+            published[path],
+            f"{args.base_url}/resolve/main/{path}",
+            root / "raw" / path,
+            root / "fetch-log.jsonl",
+            print_progress,
+        )
+    summary: dict[str, dict[str, int]] = {}
+    for split, paths in plan.items():
+        if not paths:
+            continue
+        image_dir = root / "images" / split
+        extracted = sum(extract_images(root / "raw" / path, image_dir) for path in paths)
+        (root / "metadata").mkdir(exist_ok=True)
+        rows = filter_metadata(
+            root / "raw" / f"{split}.csv", image_dir, root / "metadata" / f"{split}.csv"
+        )
+        summary[split] = {"images": extracted, "metadata_rows": rows}
+    print(json.dumps({"data_dir": str(root), **summary}, indent=2))
+    return 0
 
 
 def _stats(args: argparse.Namespace) -> int:
@@ -132,6 +191,14 @@ def build_parser() -> argparse.ArgumentParser:
         sub.add_argument("--images", required=True, help="directory of <id>.jpg train images")
         sub.add_argument("--val-fraction", type=float, default=0.05)
         sub.add_argument("--min-count", type=int, default=50)
+
+    fetch = commands.add_parser("fetch", help="download and unpack OSV-5M shards (network)")
+    fetch.add_argument("--ledger", required=True, help="dataset rights record (JSON)")
+    fetch.add_argument("--train-shards", default="0-2", help='e.g. "0-2" or "0,5"; "" for none')
+    fetch.add_argument("--test-shards", default="0-4", help='e.g. "0-4"; "" for none')
+    fetch.add_argument("--data-dir", help="dataset directory (default: application data)")
+    fetch.add_argument("--base-url", default=OSV5M_BASE_URL, help=argparse.SUPPRESS)
+    fetch.set_defaults(handler=_fetch)
 
     stats = commands.add_parser("stats", help="summarise the locally available dataset")
     common(stats)

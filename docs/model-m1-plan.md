@@ -1,6 +1,7 @@
 # Model M1 — dataset and from-scratch country classifier
 
-Status: **draft, awaiting kulo's decisions** (2026-10-16). Nothing in this plan downloads data
+Status: **approved** (2026-10-19: kulo approved the merge, OSV-5M and the download). M1a and
+M1d are done; M1b is in progress. Originally drafted 2026-10-16. Nothing in this plan downloads data
 or installs packages until kulo approves it in chat. This plan carries out the model part of
 Task 6 (and the training-data part of Task 5) in the
 [main plan](superpowers/plans/2026-10-05-geoguessr-meta-learning.md).
@@ -49,8 +50,10 @@ dataset whose ledger entry is not `cleared`. This uses the same fail-closed rule
 
 Data goes in the application-data directory (`platformdirs`), under
 `datasets/osv5m/{images,metadata}`, never inside this folder. The download is a separate,
-explicit CLI command, `geo-train fetch osv5m --shards 0-2 --test`. It records each file's
-SHA-256 and size in a local fetch log. No other code path touches the network.
+explicit CLI command, `geo-train fetch --ledger docs/sources/osv5m.json --train-shards 0-2
+--test-shards 0-4`. It verifies each file against the SHA-256 Hugging Face publishes, records
+it in `fetch-log.jsonl`, unpacks the images flat, and writes metadata CSVs filtered to the
+images present. The first fetch is 10 files, 20.0 GB (each shard holds 50,000 images). No other code path touches the network.
 
 ### Splits
 

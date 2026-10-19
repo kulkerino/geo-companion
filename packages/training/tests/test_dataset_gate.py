@@ -13,14 +13,14 @@ from geo_training.splits import group_key, select_classes, split_train_val
 REPO_LEDGER = Path(__file__).resolve().parents[3] / "docs" / "sources" / "osv5m.json"
 
 
-def test_repository_ledger_is_complete_and_not_yet_cleared() -> None:
+def test_repository_ledger_is_complete_and_cleared() -> None:
     record = load_record(REPO_LEDGER)
     assert record.dataset_id == "osv5m"
     assert record.license_name == "CC BY-SA 4.0"
-    # kulo has not cleared OSV-5M yet, so training must refuse it.
-    assert record.rights_status is RightsStatus.QUARANTINED
-    with pytest.raises(DatasetNotClearedError):
-        require_cleared(record)
+    assert "Mapillary" in record.attribution_text
+    # kulo approved OSV-5M for training on 2026-10-19.
+    assert record.rights_status is RightsStatus.CLEARED
+    assert require_cleared(record) is record
 
 
 @pytest.mark.parametrize("status", ["quarantined", "reference-only"])

@@ -6,7 +6,7 @@ work that changes it; detailed evidence for each session goes in [`journal/`](jo
 **Last updated:** 2026-10-19
 **Branch:** `feature/model-m1` (Tasks 1–3 are merged into `main`)
 **GitHub:** [kulkerino/geo-companion](https://github.com/kulkerino/geo-companion) (private), remote `origin`; branches `main`, `feature/model-m1`, and the school branch `rocnikovy-projekt`
-**Next step:** kulo approves the OSV-5M download (about 15 GB) and ledger clearing; then M1b, the first real-data smoke run. Still needed: the RTX machine's GPU.
+**Next step:** M1c, real training on the Windows RTX machine (kulo: which GPU?), with a calibration split that matches the test set.
 
 ## Task status
 
@@ -19,7 +19,8 @@ work that changes it; detailed evidence for each session goes in [`journal/`](jo
 | Model M1: plan | done | see journal | [2026-10-16](journal/2026-10-16-model-m1-plan.md) |
 | Model M1a: training pipeline on synthetic images | done, self-reviewed | see journal | [2026-10-19](journal/2026-10-19-model-m1a-pipeline.md) |
 | Model M1d: ONNX provider in the app | done, self-reviewed | see journal | [2026-10-19](journal/2026-10-19-model-m1d-onnx-provider.md) |
-| Model M1b–c: real data and RTX training | planned, M1b awaiting download approval | — | — |
+| Model M1b: first real data and laptop smoke run | done, self-reviewed | see journal | [2026-10-19](journal/2026-10-19-model-m1b-first-real-data.md) |
+| Model M1c: real training on the RTX machine | planned, needs the GPU model | — | — |
 | 4. Pack lifecycle and source tooling | planned | — | — |
 | 5. Curriculum pipeline | planned | — | — |
 | 6. Optional local model | planned | — | — |
@@ -53,6 +54,7 @@ The full plan is in
 | 2026-10-14 | Model output is post-answer only, labelled, stored apart from truth; dummy provider first | journal 2026-10-14 dummy model |
 | 2026-10-16 | Model work moved ahead of Task 4 (kulo: the model is the core); OSV-5M proposed, pending approval | `docs/model-m1-plan.md` |
 | 2026-10-19 | PR #1 merged into `main` (kulo: "merge"); `feature/initial-platform` deleted | journal 2026-10-19 M1d |
+| 2026-10-19 | OSV-5M approved and ledger `cleared`; 3 train shards + full test (20 GB) fetched | journal 2026-10-19 M1b |
 | 2026-10-19 | PyTorch, onnx, onnxruntime added as the optional `training` group; training tests skip without it | journal 2026-10-19 M1a |
 
 ## Known gaps
@@ -62,6 +64,8 @@ The full plan is in
   no photo). Stored predictions are keyed by model id and version, so bump the version on
   every retrain.
 - The laptop has no CUDA GPU, so real training needs the Windows RTX machine.
+- Smoke run: temperature fitted on val made test calibration worse (val is 25% US, test 11%);
+  M1c needs a better calibration split.
 - App rounds are diagrams, not photos, so a photo model will be out of distribution there until photo rounds or upload exist.
 - The starter pack teaches one deliberately easy cue (a named city) and contains no real
   imagery.
