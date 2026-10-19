@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" font-family="DejaVu Sans, Arial, sans-serif">
+  <rect width="640" height="360" fill="#e9f0f4"/>
+  <path d="M0 318H640" stroke="#5b6168" stroke-width="56"/>
+  <path d="M20 318H620" stroke="#f4f4f4" stroke-width="4" stroke-dasharray="28 20"/>
+  <rect x="128" y="190" width="10" height="100" fill="#6b6f74"/>
+  <rect x="22" y="96" width="320" height="96" rx="6" fill="#ffffff" stroke="#1f2328" stroke-width="6"/>
+  <text x="182" y="160" font-size="44" font-weight="700" fill="#1f2328" text-anchor="middle">DEBRECEN</text>
+  <text x="182" y="88" font-size="14" fill="#3b4148" text-anchor="middle">place-name panel</text>
+  <path d="M380 290V150L494 92L608 150V290Z" fill="#f3ede1" stroke="#6b5b45" stroke-width="4"/>
+  <rect x="398" y="168" width="192" height="54" rx="4" fill="#ffffff" stroke="#6b5b45" stroke-width="3"/>
+  <text font-size="22" fill="#1f2328" text-anchor="middle"><tspan x="494" y="190">Polgármesteri </tspan><tspan x="494" y="216">Hivatal</tspan></text>
+  <rect x="474" y="236" width="40" height="54" fill="#8a7a63"/>
+  <text x="494" y="84" font-size="14" fill="#3b4148" text-anchor="middle">municipal-office panel</text>
+  <text x="20" y="32" font-size="16" fill="#1f2328">Original practice diagram 04</text>
+  <text x="20" y="54" font-size="13" fill="#3b4148">Synthetic teaching diagram — not captured imagery or an official sign design</text>
+</svg>

@@ -1,0 +1,88 @@
+{
+  "pack_id": "starter-meta",
+  "version": "1.0.0",
+  "content_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "created_at": "2026-10-05T10:00:00Z",
+  "lessons": [
+    {
+      "lesson_id": "bollards",
+      "title": "Roadside bollards",
+      "body": "Use roadside bollards as one clue, never as certainty.",
+      "citations": [
+        {
+          "source_title": "Original project lesson",
+          "source_url": "https://example.invalid/sources/bollards",
+          "creator": "Geo Companion project",
+          "license_name": "CC BY 4.0",
+          "license_url": "https://creativecommons.org/licenses/by/4.0/",
+          "attribution_text": "Geo Companion project, CC BY 4.0",
+          "accessed_on": "2026-10-05",
+          "reviewed_on": "2026-10-05",
+          "geographic_scope": "Europe",
+          "rights_status": "cleared"
+        }
+      ],
+      "quiz_items": [
+        {
+          "quiz_id": "bollards-1",
+          "prompt": "Which clue should be combined with bollards?",
+          "choices": ["Road markings", "A single guess"],
+          "correct_choice": "Road markings",
+          "explanation": "One visual meta is insufficient by itself.",
+          "citations": [
+            {
+              "source_title": "Original project lesson",
+              "source_url": "https://example.invalid/sources/bollards",
+              "creator": "Geo Companion project",
+              "license_name": "CC BY 4.0",
+              "license_url": "https://creativecommons.org/licenses/by/4.0/",
+              "attribution_text": "Geo Companion project, CC BY 4.0",
+              "accessed_on": "2026-10-05",
+              "reviewed_on": "2026-10-05",
+              "geographic_scope": "Europe",
+              "rights_status": "cleared"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "practice_rounds": [
+    {
+      "round_id": "bollards-practice-1",
+      "asset_id": "original-bollards-diagram",
+      "asset_attribution": {
+        "source_title": "Original project diagram",
+        "source_url": "https://example.invalid/assets/bollards-diagram",
+        "creator": "Geo Companion project",
+        "license_name": "CC BY 4.0",
+        "license_url": "https://creativecommons.org/licenses/by/4.0/",
+        "attribution_text": "Geo Companion project, CC BY 4.0",
+        "accessed_on": "2026-10-05",
+        "reviewed_on": "2026-10-05",
+        "geographic_scope": "Europe",
+        "rights_status": "cleared"
+      },
+      "answer": {
+        "country_code": "SK",
+        "coordinate": {"latitude": 48.1486, "longitude": 17.1077},
+        "explanation": "This fixture is an authored teaching diagram.",
+        "citations": [
+          {
+            "source_title": "Original project diagram",
+            "source_url": "https://example.invalid/assets/bollards-diagram",
+            "creator": "Geo Companion project",
+            "license_name": "CC BY 4.0",
+            "license_url": "https://creativecommons.org/licenses/by/4.0/",
+            "attribution_text": "Geo Companion project, CC BY 4.0",
+            "accessed_on": "2026-10-05",
+            "reviewed_on": "2026-10-05",
+            "geographic_scope": "Europe",
+            "rights_status": "cleared"
+          }
+        ],
+        "answer_origin": "authored"
+      }
+    }
+  ]
+}

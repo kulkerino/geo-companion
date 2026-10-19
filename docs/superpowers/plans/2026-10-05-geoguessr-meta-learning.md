@@ -57,6 +57,11 @@
 
 ### Task 3: Standalone offline vertical slice
 
+> **Scope change (2026-10-14, kulo):** Knowledge lessons are dropped. Task 3 delivers Open
+> Practice only (clue -> guess/skip/uncertain -> reveal -> feedback/report -> retry/next ->
+> SM-2 review) over ten original cleared diagrams. The lesson items below are superseded; the
+> dormant `Lesson`/`QuizItem` domain contracts remain only so Task 2 pack fixtures stay valid.
+
 **Files:** Add a bundled starter pack, learning services, SM-2 scheduling, React Knowledge/Open Practice screens, and end-to-end tests.
 
 **Interfaces:** Implement lesson -> quiz -> explanation -> grade and image -> guess -> reveal -> feedback -> review without network access.
@@ -66,6 +71,13 @@
 - [ ] Implement the minimal end-to-end learning loop with three original lessons and at least ten redistributable generated/diagram fixtures.
 - [ ] Run the complete offline test suite and clean-start smoke test.
 - [ ] Journal and commit.
+
+### Interim step (2026-10-14): dummy model wiring
+
+> Requested by kulo before Task 4. A `PredictionProvider` boundary with a deterministic
+> `DummyProvider` (no inference, no download) and a post-answer-only model-comparison path
+> through API, SQLite, and UI. Task 6 replaces the provider with a real optional local model;
+> its abstention, manifest, benchmark, and evaluation requirements still apply then.
 
 ### Task 4: Pack lifecycle and source tooling
 

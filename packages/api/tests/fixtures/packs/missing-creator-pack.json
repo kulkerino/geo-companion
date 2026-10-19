@@ -1,0 +1,8 @@
+{
+  "pack_id": "missing-creator",
+  "version": "1.0.0",
+  "content_hash": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "created_at": "2026-10-05T10:00:00Z",
+  "lessons": [{"lesson_id": "bad", "title": "Bad", "body": "Bad", "citations": [{"source_title": "Source", "source_url": "https://example.invalid/source", "creator": "", "license_name": "CC BY 4.0", "license_url": "https://creativecommons.org/licenses/by/4.0/", "attribution_text": "Creator", "accessed_on": "2026-10-05", "reviewed_on": "2026-10-05", "geographic_scope": "Europe", "rights_status": "cleared"}], "quiz_items": []}],
+  "practice_rounds": []
+}
