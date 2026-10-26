@@ -27,8 +27,6 @@ data/local/
 data/quarantine/
 runs/*/
 reports/generated/
-.obsidian/workspace*.json
-.obsidian/cache/
-.obsidian/trash/
+.obsidian/
 apps/web/dist/
 coverage/

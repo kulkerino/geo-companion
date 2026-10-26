@@ -1,0 +1,13 @@
+{
+  "dataset_id": "osv5m",
+  "source_title": "OpenStreetView-5M",
+  "source_url": "https://huggingface.co/datasets/osv5m/osv5m",
+  "creator": "OSV-5M authors (Astruc et al., CVPR 2024); images by Mapillary contributors",
+  "license_name": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "attribution_text": "Trained on OpenStreetView-5M (Astruc et al., CVPR 2024), images by Mapillary contributors, licensed CC BY-SA 4.0.",
+  "accessed_on": "2026-10-16",
+  "reviewed_on": "2026-10-19",
+  "geographic_scope": "Worldwide street-level imagery (about 225 countries)",
+  "rights_status": "cleared"
+}

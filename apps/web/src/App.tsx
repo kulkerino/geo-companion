@@ -22,6 +22,12 @@ function days(count: number) {
   return `${count} ${count === 1 ? "day" : "days"}`;
 }
 
+// Diagrams ship with the web app; photos come from the local photo pack through the API.
+function assetUrl(round: PracticeRoundPublic) {
+  const id = encodeURIComponent(round.asset_id);
+  return round.asset_kind === "photo" ? `/api/v1/assets/${id}` : `/starter-assets/${id}`;
+}
+
 function AttributionDetails({ attribution, label }: { attribution: Attribution; label: string }) {
   return (
     <dl className="source" aria-label={label}>
@@ -166,7 +172,7 @@ function App() {
 
   return (
     <main className="shell">
-      <p className="eyebrow">Local learning companion · offline starter pack</p>
+      <p className="eyebrow">Local learning companion · offline practice</p>
       <h1>Geo Companion</h1>
       <nav aria-label="Learning modes" className="tabs">
         <button type="button" aria-pressed={view === "practice"} onClick={openPractice}>Open Practice</button>
@@ -178,8 +184,8 @@ function App() {
         {!round && !error && <p>Loading a practice round…</p>}
         {round && <>
           <p className="round-id">Round {round.round_id}</p>
-          <img className="fixture" src={`/starter-assets/${encodeURIComponent(round.asset_id)}`} alt={round.asset_description} />
-          <AttributionDetails attribution={round.asset_attribution} label="Diagram attribution" />
+          <img className={round.asset_kind === "photo" ? "fixture photo" : "fixture"} src={assetUrl(round)} alt={round.asset_description} />
+          <AttributionDetails attribution={round.asset_attribution} label={round.asset_kind === "photo" ? "Photo attribution" : "Diagram attribution"} />
           {!reveal ? <div className="attempt">
             <button type="button" onClick={() => void revealClue(round.round_id)}>Reveal optional clue</button>
             {clue && <p className="clue">{clue}</p>}

@@ -1,6 +1,7 @@
 """FastAPI entrypoint for the loopback-only local service."""
 
 from fastapi import FastAPI, HTTPException, status
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict
 
 from geo_companion.contracts import (
@@ -17,10 +18,12 @@ from geo_companion.contracts import (
 from geo_companion.learning import LearningService
 from geo_companion.models import provider_from_environment
 from geo_companion.paths import application_data_dir
-from geo_companion.starter_pack import STARTER_PACK
+from geo_companion.photo_pack import PhotoPack, photo_pack_from_environment
+from geo_companion.starter_pack import PRACTICE_ROUNDS, STARTER_PACK
 
 
-# These small response models intentionally return no content until the Task 4 lifecycle exists.
+# Pack responses list the bundled starter pack and the optional local photo pack until the
+# Task 4 install lifecycle exists.
 class ResponseModel(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -37,14 +40,19 @@ class PacksResponse(ResponseModel):
 
 app = FastAPI(title="Geo Companion API", version="0.1.0")
 learning_service: LearningService | None = None
+photo_pack: PhotoPack | None = None
 
 
 def service() -> LearningService:
     """Open the local learner database lazily so schema/OpenAPI imports stay pure."""
-    global learning_service
+    global learning_service, photo_pack
     if learning_service is None:
+        photo_pack = photo_pack_from_environment()
+        rounds = PRACTICE_ROUNDS if photo_pack is None else PRACTICE_ROUNDS + photo_pack.rounds
         learning_service = LearningService(
-            application_data_dir() / "runtime.sqlite3", provider=provider_from_environment()
+            application_data_dir() / "runtime.sqlite3",
+            provider=provider_from_environment(images=photo_pack),
+            rounds=rounds,
         )
     return learning_service
 
@@ -64,21 +72,34 @@ async def health() -> dict[str, str]:
 
 @app.get("/api/v1/packs", response_model=PacksResponse)
 async def list_packs() -> PacksResponse:
-    """Expose the immutable bundled starter pack without a lifecycle/install flow."""
+    """Expose the starter pack and any verified local photo pack, without an install flow."""
+    service()
+    packs = (STARTER_PACK,) if photo_pack is None else (STARTER_PACK, photo_pack.pack)
     return PacksResponse(
-        packs=(
-            PackSummary(
-                pack_id=STARTER_PACK.pack_id,
-                version=STARTER_PACK.version,
-                content_hash=STARTER_PACK.content_hash,
-            ),
+        packs=tuple(
+            PackSummary(pack_id=pack.pack_id, version=pack.version, content_hash=pack.content_hash)
+            for pack in packs
         )
     )
 
 
+@app.get(
+    "/api/v1/assets/{asset_id}",
+    response_class=FileResponse,
+    responses={200: {"content": {"image/jpeg": {}}}},
+)
+async def get_photo_asset(asset_id: str) -> FileResponse:
+    """Serve one verified photo of the local photo pack; its name reveals nothing."""
+    service()
+    path = None if photo_pack is None else photo_pack.asset_path(asset_id)
+    if path is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Asset not found.")
+    return FileResponse(path, media_type="image/jpeg")
+
+
 @app.get("/api/v1/practice/rounds/next", response_model=PracticeRoundPublic)
 async def next_practice_round() -> PracticeRoundPublic:
-    """Serve an original diagram only; answers never leave this route before submission."""
+    """Serve the next diagram or photo round; answers never leave this route before submission."""
     return service().next_round()
 
 

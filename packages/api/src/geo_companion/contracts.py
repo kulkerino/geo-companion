@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from datetime import date, datetime, timedelta
 from enum import StrEnum
-from typing import Any, Literal, Self
+from typing import Annotated, Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, computed_field, model_validator
 
@@ -96,9 +96,15 @@ class SourceTruthAnswer(ContractModel):
     answer_origin: Literal[AnswerOrigin.SOURCE_TRUTH, AnswerOrigin.AUTHORED]
 
 
+class AssetKind(StrEnum):
+    DIAGRAM = "diagram"
+    PHOTO = "photo"
+
+
 class PracticeRound(ContractModel):
     round_id: str = Field(min_length=1)
     asset_id: str = Field(min_length=1)
+    asset_kind: AssetKind = AssetKind.DIAGRAM
     asset_attribution: Attribution
     asset_description: str = Field(
         default="Original educational practice diagram.",
@@ -114,6 +120,7 @@ class PracticeRoundPublic(ContractModel):
 
     round_id: str
     asset_id: str
+    asset_kind: AssetKind
     asset_attribution: Attribution
     asset_description: str
 
@@ -122,6 +129,7 @@ class PracticeRoundPublic(ContractModel):
         return cls(
             round_id=round_.round_id,
             asset_id=round_.asset_id,
+            asset_kind=round_.asset_kind,
             asset_attribution=round_.asset_attribution,
             asset_description=round_.asset_description,
         )
@@ -277,6 +285,31 @@ class ModelManifest(ContractModel):
     required_for_learning: Literal[False] = False
 
 
+# ImageNet channel statistics; training and the app normalise images with the same values.
+IMAGE_MEAN = (0.485, 0.456, 0.406)
+IMAGE_STD = (0.229, 0.224, 0.225)
+
+
+class CountryModelManifest(ModelManifest):
+    """Everything the app needs to run an exported country model and to label its output.
+
+    The artifact sits next to the manifest under ``artifact_file``; a bare file name, so a
+    manifest cannot point the app at a file elsewhere on disk.
+    """
+
+    artifact_file: str = Field(default="model.onnx", pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    classes: tuple[Annotated[str, Field(pattern=r"^[A-Z]{2}$")], ...] = Field(min_length=2)
+    input_size: int = Field(gt=0)
+    mean: tuple[float, float, float] = IMAGE_MEAN
+    std: tuple[float, float, float] = IMAGE_STD
+    temperature: float = Field(gt=0)
+    abstain_below: float = Field(ge=0, le=1)
+    trained_on: str = Field(min_length=1)
+    dataset_license: str = Field(min_length=1)
+    dataset_attribution: str = Field(min_length=1)
+    evaluation: dict[str, Any]
+
+
 class ModelArtifactReference(ContractModel):
     """Immutable identity used to bind experiments to an exact model artifact."""
 
@@ -346,3 +379,34 @@ class ContentPack(ContractModel):
         if not self.is_publication_ready():
             msg = "Only cleared content may be published or activated."
             raise PublicationError(msg)
+
+
+class PackAsset(ContractModel):
+    """One image file of a local pack, bound to its bytes by SHA-256."""
+
+    asset_id: str = Field(pattern=r"^[a-z0-9][a-z0-9-]*\.jpg$")
+    sha256: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
+
+
+class LocalPhotoPack(ContractModel):
+    """A photo pack built on this machine into application data, never into the repository.
+
+    Its image files sit in ``assets/`` next to the pack file. The app loads it only when asked
+    to, and only after the content hash, the rights and every image hash check out.
+    """
+
+    pack: ContentPack
+    source_dataset: str = Field(min_length=1)
+    assets: tuple[PackAsset, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def every_photo_round_has_one_asset(self) -> LocalPhotoPack:
+        asset_ids = [asset.asset_id for asset in self.assets]
+        if len(set(asset_ids)) != len(asset_ids):
+            raise ValueError("asset ids must be unique")
+        rounds = self.pack.practice_rounds
+        if any(round_.asset_kind is not AssetKind.PHOTO for round_ in rounds):
+            raise ValueError("a photo pack contains photo rounds only")
+        if sorted(round_.asset_id for round_ in rounds) != sorted(asset_ids):
+            raise ValueError("every photo round needs exactly one listed asset")
+        return self

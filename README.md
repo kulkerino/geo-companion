@@ -1,9 +1,9 @@
 # Geo Companion
 
 Geo Companion is a private, offline-first learning app for studying visual
-geography clues without depending on GeoGuessr. The repository is also an
-Obsidian vault: source, decisions, and reproducibility metadata are tracked;
-runtime learner data, downloaded packs, and model binaries are not.
+geography clues without depending on GeoGuessr. Source, decisions, and
+reproducibility metadata are tracked; runtime learner data, downloaded packs,
+datasets, and model binaries are not.
 
 ## Progress and documentation
 
@@ -38,10 +38,50 @@ GEO_COMPANION_DATA_DIR=/tmp/geo-companion-clean-start \
   uv run uvicorn geo_companion.main:app --host 127.0.0.1 --port 8000
 ```
 
-After answering a round you can press **Compare with model** to see the local model's opinion.
-For now this is a clearly labelled placeholder (`dummy-placeholder`) that makes no real
-inference; it exists so a real local model can be swapped in later without changing the app.
-Start FastAPI with `GEO_COMPANION_MODEL=none` to run without any model.
+After answering a round you can press **Compare with model** to see a local model's opinion.
+`GEO_COMPANION_MODEL` picks the provider when FastAPI starts:
+
+- `dummy` (the default) is a clearly labelled placeholder (`dummy-placeholder`) that makes no
+  real inference.
+- `none` runs without any model.
+- `onnx:<manifest path>` loads a real exported country model. Both `manifest.json` and
+  `model.onnx` must live outside this repository (for example in the application-data
+  directory); the app refuses to start if the model's SHA-256 does not match the manifest,
+  and it never downloads a model. It needs the optional `model` dependency group:
+
+```bash
+GEO_COMPANION_MODEL=onnx:$HOME/.local/share/geo-companion/training/runs/m1c/manifest.json \
+  uv run --group model uvicorn geo_companion.main:app --host 127.0.0.1 --port 8000
+```
+
+The photo model abstains on the bundled starter rounds, which are SVG diagrams rather than
+photos. See [`docs/model-m1-plan.md`](docs/model-m1-plan.md) and
+[`docs/runbook-m1c-rtx-3060.md`](docs/runbook-m1c-rtx-3060.md) for how the model is trained.
+
+### Photo rounds
+
+`geo-train photo-pack` builds a local pack of photo rounds from the held-out OSV-5M test
+photos (already fetched by `geo-train fetch`, never the train split). It spreads the rounds
+over countries, gives every round and photo an opaque id, shuffles them, and re-encodes each
+photo without metadata. The photographer and place are shown only after you answer. The
+pack goes to the application-data directory, never this repository:
+
+```bash
+D=$HOME/.local/share/geo-companion/datasets/osv5m
+uv run geo-train photo-pack --ledger docs/sources/osv5m.json \
+  --metadata $D/metadata/test.csv --images $D/images/test --rounds 200
+```
+
+`GEO_COMPANION_PHOTO_PACK=<pack.json>` adds the pack's rounds after the starter rounds. The
+app checks the content hash, the rights and every photo's SHA-256 when it starts, and refuses
+to start if anything does not match. With an ONNX model enabled as well, **Compare with
+model** runs the model on the round's photo:
+
+```bash
+P=$HOME/.local/share/geo-companion/packs/osv5m-test-photos/1.0.0/pack.json
+GEO_COMPANION_PHOTO_PACK=$P GEO_COMPANION_MODEL=onnx:<manifest path> \
+  uv run --group model uvicorn geo_companion.main:app --host 127.0.0.1 --port 8000
+```
 
 No request leaves the laptop: the bundled diagrams are original teaching assets,
 not Street View or other captured imagery. They are rendered deterministically by
@@ -66,7 +106,5 @@ See [the project brief](docs/project-brief.md), [ethics boundary](docs/ethics-bo
 and [data policy](docs/data-policy.md) before adding content, data, models, or
 integrations.
 
-Obsidian's built-in Templates core plugin is enabled in
-`.obsidian/core-plugins.json` and is configured to use the committed
-[`templates/`](templates/) folder. Use `templates/session-note.md` for each
-substantive session.
+Use [`templates/session-note.md`](templates/session-note.md) for each
+substantive session's journal entry.

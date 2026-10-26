@@ -62,6 +62,7 @@ def test_practice_round_public_contract_keeps_answer_and_coordinate_hidden() -> 
     assert public_round.model_dump(mode="json") == {
         "round_id": "bollards-practice-1",
         "asset_id": "original-bollards-diagram",
+        "asset_kind": "diagram",
         "asset_attribution": pack.practice_rounds[0].asset_attribution.model_dump(mode="json"),
         "asset_description": "Original educational practice diagram.",
     }

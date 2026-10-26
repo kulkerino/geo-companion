@@ -188,7 +188,7 @@ def main() -> int:
     if args.check:
         stale = []
         for path, contents in files.items():
-            if not path.exists() or path.read_text() != contents:
+            if not path.exists() or path.read_text(encoding="utf-8") != contents:
                 stale.append(path)
         if stale:
             print("Generated API artifacts are stale:")
@@ -197,7 +197,7 @@ def main() -> int:
         return 0
     for path, contents in files.items():
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(contents)
+        path.write_text(contents, encoding="utf-8", newline="\n")
     return 0
 
 
