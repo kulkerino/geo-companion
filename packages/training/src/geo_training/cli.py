@@ -187,7 +187,18 @@ def _run(args: argparse.Namespace) -> int:
         num_workers=args.workers,
         device=args.device,
     )
-    model = train_model(train_samples, val_samples, classes, config, out_dir)
+    model = train_model(
+        train_samples, val_samples, classes, config, out_dir,
+        resume=args.resume, max_hours=args.max_hours,
+    )  # fmt: skip
+    if model is None:
+        done = len((out_dir / "history.jsonl").read_text(encoding="utf-8").splitlines())
+        print(
+            f"Paused after epoch {done} of {config.epochs}. Run the same command with --resume "
+            "to continue.",
+            file=sys.stderr,
+        )
+        return 0
     device = resolve_device(config.device)
 
     val_set = SampleDataset(val_samples, classes, config.image_size, False, config.seed)
@@ -307,6 +318,14 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--seed", type=int, default=0)
     run.add_argument("--workers", type=int, default=4)
     run.add_argument("--device", default="auto")
+    run.add_argument(
+        "--resume", action="store_true", help="continue the paused or killed run of this name"
+    )
+    run.add_argument(
+        "--max-hours",
+        type=float,
+        help="pause after the last epoch that fits in this many hours; continue with --resume",
+    )
     run.set_defaults(handler=_run)
     return parser
 

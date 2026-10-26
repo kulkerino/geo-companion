@@ -6,7 +6,7 @@ work that changes it; detailed evidence for each session goes in [`journal/`](jo
 **Last updated:** 2026-10-26
 **Branch:** `feature/model-m1`, draft [PR #3](https://github.com/kulkerino/geo-companion/pull/3) into `main` (Tasks 1–3 are merged into `main`)
 **GitHub:** [kulkerino/geo-companion](https://github.com/kulkerino/geo-companion) (private), remote `origin`; branches `main`, `feature/model-m1`, and the school branch `rocnikovy-projekt`
-**Next step:** M1c training on a weekend while kulo is home (data is already on the RTX 3060 PC; plan for 10–15 hours), following [`docs/runbook-m1c-rtx-3060.md`](docs/runbook-m1c-rtx-3060.md); then load the M1c model with the photo pack, and the independent M1 review.
+**Next step:** M1c training in sessions while kulo is home (data is already on the RTX 3060 PC; about 12–14 hours in total, resumable), following [`docs/runbook-m1c-rtx-3060.md`](docs/runbook-m1c-rtx-3060.md); then load the M1c model with the photo pack, and the independent M1 review.
 
 ## Task status
 
@@ -23,7 +23,7 @@ work that changes it; detailed evidence for each session goes in [`journal/`](jo
 | Model M1c prep: calibration fix and RTX 3060 runbook | done, self-reviewed | see journal | [2026-10-19](journal/2026-10-19-model-m1c-prep.md) |
 | Repository cleanup (no behaviour change) | done, PR #2 merged into `feature/model-m1` | see journal | [2026-10-26](journal/2026-10-26-repo-cleanup.md) |
 | Photo rounds from held-out OSV-5M test photos | done, self-reviewed | see journal | [2026-10-26](journal/2026-10-26-photo-rounds.md) |
-| Model M1c: real training on the RTX 3060 PC | set up, data fetched, smoke runs pass; training postponed to a weekend | `bf0c931` | [2026-10-26](journal/2026-10-26-model-m1c-rtx-3060.md) |
+| Model M1c: real training on the RTX 3060 PC | set up, data fetched, smoke runs pass, training made resumable; the run itself is postponed | `bf0c931`, see journal | [2026-10-26](journal/2026-10-26-model-m1c-rtx-3060.md) |
 | 4. Pack lifecycle and source tooling | planned | — | — |
 | 5. Curriculum pipeline | planned | — | — |
 | 6. Optional local model | planned | — | — |
@@ -68,6 +68,7 @@ The full plan is in
 | 2026-10-19 | PyTorch, onnx, onnxruntime added as the optional `training` group; training tests skip without it | journal 2026-10-19 M1a |
 | 2026-10-26 | `.obsidian/` is local editor state and no longer tracked | journal 2026-10-26 cleanup |
 | 2026-10-26 | Photo rounds use the OSV-5M test split only; photographer credit shown after the answer; display use pending kulo's OK | journal 2026-10-26 photo rounds |
+| 2026-10-26 | M1c runs only while kulo is home: training is resumable (`--resume`, `--max-hours`) and split into sessions | journal 2026-10-26 M1c |
 
 ## Known gaps
 
@@ -75,8 +76,12 @@ The full plan is in
   exported model, but only the weak smoke model exists until M1c, and it abstains on starter rounds (SVG
   diagrams, no photo). Stored predictions are keyed by model id and version, so bump the version on
   every retrain.
-- The laptop has no CUDA GPU, so real training runs on the RTX 3060 PC. Nothing has run on
-  Windows or a GPU yet.
+- The laptop has no CUDA GPU, so real training runs on the RTX 3060 PC. Smoke runs pass
+  there (about 300 photos/s, so M1c is about 12–14 hours of training in sessions), but M1c
+  itself has not run yet.
+- On Windows, 4 tests outside the training package fail (a `cp1252` decode where a read lacks
+  `encoding="utf-8"`, and `os.symlink` needing a privilege), and `mypy` flags
+  `torch.amp.GradScaler` with torch 2.11. All three predate the M1c work.
 - Calibration now uses a sqrt class-weighted val (smoke model: test ECE 0.090 → 0.023), but
   that was checked only on a weak smoke model; M1c must confirm it.
 - Photo rounds exist but are opt-in (`GEO_COMPANION_PHOTO_PACK`) and come after the diagrams;
