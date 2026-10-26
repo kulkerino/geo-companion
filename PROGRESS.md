@@ -38,8 +38,10 @@ The full plan is in
   marked uncertain, or skip; the answer and explanation are revealed afterwards. You can
   report a problem with an attempt, retry the same round, or move to the next round.
 - SM-2 study review ordered by due date, with "practice this round" from the review screen.
-- After answering, "Compare with model" shows a clearly labelled placeholder model's opinion
-  (`dummy-placeholder`, no real inference). `GEO_COMPANION_MODEL=none` runs without a model.
+- After answering, "Compare with model" shows a model's opinion. The default is a clearly
+  labelled placeholder (`dummy-placeholder`, no real inference); `GEO_COMPANION_MODEL=none`
+  runs without a model, and `GEO_COMPANION_MODEL=onnx:<manifest>` loads a real exported
+  model (see the README).
 - Everything runs locally: FastAPI on `127.0.0.1:8000`, Vite on `127.0.0.1:5173`, and SQLite
   in the per-user application-data directory (never inside this folder).
 
