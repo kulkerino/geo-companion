@@ -20,7 +20,7 @@ from geo_companion.paths import application_data_dir
 from geo_companion.starter_pack import STARTER_PACK
 
 
-# These small response models intentionally return no content until the Task 4 lifecycle exists.
+# Pack responses list only the bundled starter pack until the Task 4 install lifecycle exists.
 class ResponseModel(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
