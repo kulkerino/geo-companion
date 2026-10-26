@@ -86,10 +86,6 @@ command with Ctrl+C, closing the window or a power cut loses only the epoch in p
 session that finishes epoch 16 goes on to calibrate, evaluate on the test split and export.
 A progress line with the time left in the epoch is printed every 500 steps.
 
-Before the first session, delete the folder left by the run stopped on 2026-10-26, which
-holds only an empty history:
-`Remove-Item -Recurse "$env:LOCALAPPDATA\geo-companion\training\runs\m1c"`.
-
 - ResNet-18 layout (width 64, about 11M parameters), 224 px, random initialisation.
 - Calibration defaults to `--calibration sqrt`: validation is reweighted to the same class
   prior as the square-root balanced training sampler (see the M1c-prep journal).
