@@ -4,7 +4,7 @@ The current state of the project at a glance. Update this file in the same commi
 work that changes it; detailed evidence for each session goes in [`journal/`](journal/).
 
 **Last updated:** 2026-10-26
-**Branch:** `feature/model-m1` (Tasks 1–3 are merged into `main`)
+**Branch:** `feature/model-m1`, draft [PR #3](https://github.com/kulkerino/geo-companion/pull/3) into `main` (Tasks 1–3 are merged into `main`)
 **GitHub:** [kulkerino/geo-companion](https://github.com/kulkerino/geo-companion) (private), remote `origin`; branches `main`, `feature/model-m1`, and the school branch `rocnikovy-projekt`
 **Next step:** M1c on kulo's RTX 3060 PC, following [`docs/runbook-m1c-rtx-3060.md`](docs/runbook-m1c-rtx-3060.md); then load the M1c model with the photo pack, and the independent M1 review.
 
