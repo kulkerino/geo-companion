@@ -74,7 +74,8 @@ def choose_threshold(
     """Lowest top-1 threshold whose answered subset reaches ``target`` (weighted) accuracy.
 
     The model answers when top-1 probability >= threshold, otherwise it abstains. If no
-    threshold reaches the target, the threshold is above 1 and the model always abstains.
+    threshold reaches the target, the threshold is 1.0 (the manifest maximum), so the model
+    abstains unless its top-1 probability is exactly 1.
     """
     sample_weights = torch.ones(len(labels)) if weights is None else weights
     confidence, predicted = probs.max(dim=1)
@@ -85,7 +86,7 @@ def choose_threshold(
     running = (correct * ordered_weights).cumsum(0) / answered_weight
     reaching = (running >= target).nonzero().flatten()
     if len(reaching) == 0:
-        return Abstention(threshold=1.01, coverage=0.0, selective_accuracy=0.0)
+        return Abstention(threshold=1.0, coverage=0.0, selective_accuracy=0.0)
     last = int(reaching[-1].item())
     return Abstention(
         threshold=float(confidence[order][last].item()),

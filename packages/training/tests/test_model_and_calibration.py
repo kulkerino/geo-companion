@@ -70,7 +70,7 @@ def test_threshold_reaches_target_on_the_answered_subset() -> None:
 def test_threshold_abstains_everywhere_when_target_is_unreachable() -> None:
     probs = torch.tensor([[0.9, 0.1]])
     result = choose_threshold(probs, torch.tensor([1]), target=0.5)
-    assert result.threshold > 1 and result.coverage == 0.0
+    assert result.threshold == 1.0 and result.coverage == 0.0
 
 
 def test_class_weights_reweight_val_to_the_training_prior() -> None:
