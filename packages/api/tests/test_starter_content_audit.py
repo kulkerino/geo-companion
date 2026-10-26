@@ -118,12 +118,12 @@ def test_public_round_text_and_diagrams_do_not_reveal_any_country() -> None:
     for round_ in PRACTICE_ROUNDS:
         assert_not_revealing(PracticeRoundPublic.from_round(round_).model_dump_json())
         assert_not_revealing(PracticeClue(round_id=round_.round_id, clue=round_.clue).clue)
-        assert_not_revealing((ASSET_DIRECTORY / round_.asset_id).read_text())
+        assert_not_revealing((ASSET_DIRECTORY / round_.asset_id).read_text(encoding="utf-8"))
 
 
 def test_diagrams_are_self_contained_and_generated_from_the_authoring_records() -> None:
     for path in sorted(ASSET_DIRECTORY.glob("*.svg")):
-        raw = path.read_text()
+        raw = path.read_text(encoding="utf-8")
         root = ET.fromstring(raw)
         tags = {element.tag.removeprefix(SVG) for element in root.iter()}
         attributes = {name for element in root.iter() for name in element.attrib}

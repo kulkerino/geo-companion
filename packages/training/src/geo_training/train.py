@@ -163,7 +163,7 @@ def train(
     schedule = torch.optim.lr_scheduler.LambdaLR(optimiser, learning_rate_factor)
     loss_fn = nn.CrossEntropyLoss(label_smoothing=config.label_smoothing)
     use_amp = device.type == "cuda"
-    scaler = torch.amp.GradScaler("cuda", enabled=use_amp)
+    scaler = torch.amp.grad_scaler.GradScaler("cuda", enabled=use_amp)
 
     best_accuracy = -1.0
     first_epoch = 0

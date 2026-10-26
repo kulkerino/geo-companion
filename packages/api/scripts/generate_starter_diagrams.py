@@ -74,7 +74,9 @@ def main() -> int:
     files = generated_files()
     if args.check:
         stale = [
-            path for path, text in files.items() if not path.exists() or path.read_text() != text
+            path
+            for path, text in files.items()
+            if not path.exists() or path.read_text(encoding="utf-8") != text
         ]
         extra = sorted(set(ASSET_DIRECTORY.glob("*.svg")) - set(files))
         if stale or extra:
@@ -84,7 +86,7 @@ def main() -> int:
         return 0
     ASSET_DIRECTORY.mkdir(parents=True, exist_ok=True)
     for path, contents in files.items():
-        path.write_text(contents)
+        path.write_text(contents, encoding="utf-8", newline="\n")
     return 0
 
 

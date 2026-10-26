@@ -79,9 +79,8 @@ The full plan is in
 - The laptop has no CUDA GPU, so real training runs on the RTX 3060 PC. Smoke runs pass
   there (about 300 photos/s, so M1c is about 12–14 hours of training in sessions), but M1c
   itself has not run yet.
-- On Windows, 4 tests outside the training package fail (a `cp1252` decode where a read lacks
-  `encoding="utf-8"`, and `os.symlink` needing a privilege), and `mypy` flags
-  `torch.amp.GradScaler` with torch 2.11. All three predate the M1c work.
+- On the Windows PC the Python checks pass, except the web-bundle test, which needs Node and
+  pnpm (not installed there); the symlink storage test skips without the symlink privilege.
 - Calibration now uses a sqrt class-weighted val (smoke model: test ECE 0.090 → 0.023), but
   that was checked only on a weak smoke model; M1c must confirm it.
 - Photo rounds exist but are opt-in (`GEO_COMPANION_PHOTO_PACK`) and come after the diagrams;
