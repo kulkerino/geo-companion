@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import sqlite3
 import uuid
 from collections.abc import Iterator
@@ -13,6 +14,7 @@ from geo_companion.contracts import (
     Feedback,
     ModelPredictionResult,
     ModelStatus,
+    PhotoGuessResult,
     PracticeAnswerResult,
     PracticeAnswerSubmission,
     PracticeClue,
@@ -32,6 +34,10 @@ QUALITY_INCORRECT = 2
 QUALITY_SKIPPED = 1
 
 
+class PracticePhotoError(ValueError):
+    """An upload is byte-for-byte one of the practice rounds' photos."""
+
+
 class LearningService:
     """Own one pseudonymous learner's local history and immutable practice content."""
 
@@ -42,6 +48,7 @@ class LearningService:
         database_path: Path,
         provider: PredictionProvider | None = None,
         rounds: tuple[PracticeRound, ...] = PRACTICE_ROUNDS,
+        practice_photo_hashes: frozenset[str] = frozenset(),
     ) -> None:
         round_ids = [round_.round_id for round_ in rounds]
         if not rounds or len(set(round_ids)) != len(round_ids):
@@ -49,6 +56,7 @@ class LearningService:
         self.database_path = database_path
         self.provider = provider
         self.rounds = rounds
+        self.practice_photo_hashes = practice_photo_hashes
         self.database_path.parent.mkdir(parents=True, exist_ok=True)
         self._initialize()
 
@@ -245,6 +253,23 @@ class LearningService:
                 ),
             )
         return result
+
+    def photo_guess(self, photo: bytes) -> PhotoGuessResult:
+        """Ask the model about the learner's own photo. The photo and the result are kept in
+        memory only: an upload has no authored answer, so there is no attempt to record."""
+        if self.provider is None:
+            raise LookupError("No local model is enabled.")
+        # Uploading a practice round's own photo would ask the model before answering, so
+        # those bytes are refused here; "Compare with model" covers them after the answer.
+        if f"sha256:{hashlib.sha256(photo).hexdigest()}" in self.practice_photo_hashes:
+            raise PracticePhotoError(
+                "This is one of the practice photos. Answer its round first, then use "
+                "Compare with model."
+            )
+        candidates = self.provider.predict_photo(photo)
+        return PhotoGuessResult(
+            model=self.provider.info, candidates=candidates, abstained=not candidates
+        )
 
     def attempt_history(self, round_id: str) -> list[dict[str, object]]:
         with self._connect() as connection:

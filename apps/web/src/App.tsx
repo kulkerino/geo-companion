@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ChangeEvent } from "react";
 
 import {
   GeoCompanionApiClient,
   type Attribution,
+  type ModelCandidate,
   type ModelInfo,
   type ModelPredictionResult,
+  type PhotoGuessResult,
   type PracticeAnswerResult,
   type PracticeRoundPublic,
   type StudyProgress,
@@ -12,7 +14,8 @@ import {
 import "./app.css";
 
 const client = new GeoCompanionApiClient();
-type View = "practice" | "study";
+type View = "practice" | "study" | "photo";
+const PHOTO_TYPES = "image/jpeg,image/png,image/webp";
 
 function message(error: unknown) {
   return error instanceof Error ? error.message : "The local learning service is unavailable.";
@@ -61,21 +64,75 @@ function Schedule({ progress }: { progress: StudyProgress }) {
   );
 }
 
-function ModelComparison({ prediction }: { prediction: ModelPredictionResult }) {
-  const { model } = prediction;
+function ModelOpinion({ label, model, candidates, abstained, note }: { label: string; model: ModelInfo; candidates: ModelCandidate[]; abstained: boolean; note: string }) {
   return (
-    <div className="model" aria-label="Model comparison">
+    <div className="model" aria-label={label}>
       <p className="model-name">
         Model opinion: {model.model_id} {model.version}{model.is_placeholder ? " (placeholder, not real inference)" : ""}
       </p>
       <p className="origin">{model.description}</p>
-      {prediction.abstained ? <p>The model abstained: it was not confident enough to guess.</p> : (
+      {abstained ? <p>The model abstained: it was not confident enough to guess.</p> : (
         <ol>
-          {prediction.candidates.map((candidate) => <li key={candidate.country_code}>{candidate.country_code} · {Math.round(candidate.confidence * 100)}%</li>)}
+          {candidates.map((candidate) => <li key={candidate.country_code}>{candidate.country_code} · {Math.round(candidate.confidence * 100)}%</li>)}
         </ol>
       )}
-      <p className="origin">Model output is stored separately and never changes the authored answer.</p>
+      <p className="origin">{note}</p>
     </div>
+  );
+}
+
+function ModelComparison({ prediction }: { prediction: ModelPredictionResult }) {
+  return <ModelOpinion label="Model comparison" model={prediction.model} candidates={prediction.candidates} abstained={prediction.abstained} note="Model output is stored separately and never changes the authored answer." />;
+}
+
+// The learner's own photo goes only to the local API, which keeps it in memory for one request.
+function PhotoGuess({ model }: { model: ModelInfo | null }) {
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [result, setResult] = useState<PhotoGuessResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+
+  useEffect(() => () => {
+    if (preview) URL.revokeObjectURL(preview);
+  }, [preview]);
+
+  const choose = (event: ChangeEvent<HTMLInputElement>) => {
+    const chosen = event.target.files?.[0] ?? null;
+    setFile(chosen);
+    setPreview(chosen ? URL.createObjectURL(chosen) : null);
+    setResult(null);
+    setError(null);
+  };
+
+  const ask = async () => {
+    if (!file) return;
+    try {
+      setPending(true);
+      setError(null);
+      setResult(await client.guess_photo_api_v1_photo_guesses_post(file));
+    } catch (caught) {
+      setError(message(caught));
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <section aria-labelledby="photo-title">
+      <h2 id="photo-title">Your photo</h2>
+      <p>Choose a street-level photo of your own. The model gives its top three country guesses, or abstains when it is not sure. It is a guess, not an identification.</p>
+      <p className="origin">The photo stays on this computer: it is sent only to the local service, used for this one guess, and never saved.</p>
+      {!model && <p>No local model is enabled, so there is nothing to ask yet.</p>}
+      <label htmlFor="photo-file">Photo (JPEG, PNG or WebP)</label>
+      <input id="photo-file" type="file" accept={PHOTO_TYPES} onChange={choose} />
+      {preview && <img className="fixture photo" src={preview} alt="Your chosen photo" />}
+      {error && <p role="alert">{error}</p>}
+      <div className="actions">
+        <button type="button" disabled={pending || !file || !model} onClick={() => void ask()}>Ask the model</button>
+      </div>
+      {result && <ModelOpinion label="Model guess for your photo" model={result.model} candidates={result.candidates} abstained={result.abstained} note="Your photo has no known answer, so this guess is not graded and is not saved." />}
+    </section>
   );
 }
 
@@ -177,8 +234,10 @@ function App() {
       <nav aria-label="Learning modes" className="tabs">
         <button type="button" aria-pressed={view === "practice"} onClick={openPractice}>Open Practice</button>
         <button type="button" aria-pressed={view === "study"} onClick={openStudy}>Study review</button>
+        <button type="button" aria-pressed={view === "photo"} onClick={() => setView("photo")}>Your photo</button>
       </nav>
-      {error && <p role="alert">{error}</p>}
+      {error && view !== "photo" && <p role="alert">{error}</p>}
+      {view === "photo" && <PhotoGuess model={model} />}
       {view === "practice" && <section aria-labelledby="practice-title">
         <h2 id="practice-title">Open Practice</h2>
         {!round && !error && <p>Loading a practice round…</p>}

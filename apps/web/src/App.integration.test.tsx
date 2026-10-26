@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
@@ -118,6 +118,28 @@ describe("App with the real API and SQLite", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Practice this round" }));
     expect(await screen.findByRole("img", { name: /place-name panel reading BRATISLAVA/ })).toBeInTheDocument();
     expect(pageText()).not.toMatch(/Slovakia|Answer:/);
+  }, 60_000);
+
+  it("guesses an uploaded photo through the real API without storing it", async () => {
+    const dataDir = freshDataDir();
+    await startApi(dataDir);
+    Object.assign(URL, { createObjectURL: () => "blob:preview", revokeObjectURL: () => {} });
+    render(<App />);
+
+    await screen.findByRole("img", { name: /BRATISLAVA/ });
+    fireEvent.click(screen.getByRole("button", { name: "Your photo" }));
+    const photo = new File([new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3])], "trip.jpg", { type: "image/jpeg" });
+    fireEvent.change(screen.getByLabelText(/Photo \(JPEG/), { target: { files: [photo] } });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Ask the model" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "Ask the model" }));
+
+    const guess = await screen.findByLabelText("Model guess for your photo");
+    expect(guess).toHaveTextContent("dummy-placeholder 0.1.0 (placeholder, not real inference)");
+    expect(guess).toHaveTextContent(/abstained|%/);
+    expect(guess).toHaveTextContent("not graded and is not saved");
+    const database = new DatabaseSync(join(dataDir, "runtime.sqlite3"));
+    expect(database.prepare("SELECT COUNT(*) AS rows FROM learner_model_predictions").get()).toEqual({ rows: 0 });
+    database.close();
   }, 60_000);
 
   it("runs practice without a model when the model is switched off", async () => {

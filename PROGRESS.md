@@ -4,8 +4,8 @@ The current state of the project at a glance. Update this file in the same commi
 work that changes it; detailed evidence for each session goes in [`journal/`](journal/).
 
 **Last updated:** 2026-10-26
-**Branch:** `feature/model-m1`, draft [PR #3](https://github.com/kulkerino/geo-companion/pull/3) into `main` (Tasks 1–3 are merged into `main`)
-**GitHub:** [kulkerino/geo-companion](https://github.com/kulkerino/geo-companion) (private), remote `origin`; branches `main`, `feature/model-m1`, and the school branch `rocnikovy-projekt`
+**Branch:** `feature/model-m1`, draft [PR #3](https://github.com/kulkerino/geo-companion/pull/3) into `main` (Tasks 1–3 are merged into `main`); photo upload is on `feature/photo-upload`, a draft PR into `feature/model-m1`
+**GitHub:** [kulkerino/geo-companion](https://github.com/kulkerino/geo-companion) (public, because the professor needs access), remote `origin`; branches `main`, `feature/model-m1`, `feature/photo-upload`, and the school branch `rocnikovy-projekt`
 **Next step:** M1c training in sessions while kulo is home (data is already on the RTX 3060 PC; about 12–14 hours in total, resumable), following [`docs/runbook-m1c-rtx-3060.md`](docs/runbook-m1c-rtx-3060.md); then load the M1c model with the photo pack, and the independent M1 review.
 
 ## Task status
@@ -24,6 +24,7 @@ work that changes it; detailed evidence for each session goes in [`journal/`](jo
 | Repository cleanup (no behaviour change) | done, PR #2 merged into `feature/model-m1` | see journal | [2026-10-26](journal/2026-10-26-repo-cleanup.md) |
 | Photo rounds from held-out OSV-5M test photos | done, self-reviewed | see journal | [2026-10-26](journal/2026-10-26-photo-rounds.md) |
 | Model M1c: real training on the RTX 3060 PC | set up, data fetched, smoke runs pass, training made resumable; the run itself is postponed | `bf0c931`, see journal | [2026-10-26](journal/2026-10-26-model-m1c-rtx-3060.md) |
+| Photo upload: the model's top-3 guess or abstention on your own photo | done, self-reviewed; draft PR into `feature/model-m1` | see journal | [2026-10-26](journal/2026-10-26-photo-upload.md) |
 | 4. Pack lifecycle and source tooling | planned | — | — |
 | 5. Curriculum pipeline | planned | — | — |
 | 6. Optional local model | planned | — | — |
@@ -48,6 +49,9 @@ The full plan is in
   test photos (opaque ids, metadata stripped, credit and place revealed after the answer),
   and `GEO_COMPANION_PHOTO_PACK=<pack.json>` loads it after hash and rights checks. With an
   ONNX model, "Compare with model" runs on the round's photo.
+- **Your photo**: upload a JPEG, PNG or WebP photo of your own and get the enabled model's
+  top-3 country guess or an abstention. The photo is held in memory for that request only
+  and nothing is stored; photos from the loaded photo pack are refused.
 - Everything runs locally: FastAPI on `127.0.0.1:8000`, Vite on `127.0.0.1:5173`, and SQLite
   in the per-user application-data directory (never inside this folder).
 
@@ -68,6 +72,8 @@ The full plan is in
 | 2026-10-19 | PyTorch, onnx, onnxruntime added as the optional `training` group; training tests skip without it | journal 2026-10-19 M1a |
 | 2026-10-26 | `.obsidian/` is local editor state and no longer tracked | journal 2026-10-26 cleanup |
 | 2026-10-26 | Photo rounds use the OSV-5M test split only; photographer credit shown after the answer; display use pending kulo's OK | journal 2026-10-26 photo rounds |
+| 2026-10-26 | The GitHub repo stays public (kulo: the professor needs it) | journal 2026-10-26 photo upload |
+| 2026-10-26 | Uploaded photos are kept in memory for one request, never stored, never graded; pack photos are refused byte for byte | journal 2026-10-26 photo upload |
 | 2026-10-26 | M1c runs only while kulo is home: training is resumable (`--resume`, `--max-hours`) and split into sessions | journal 2026-10-26 M1c |
 
 ## Known gaps
@@ -79,13 +85,17 @@ The full plan is in
 - The laptop has no CUDA GPU, so real training runs on the RTX 3060 PC. Smoke runs pass
   there (about 300 photos/s, so M1c is about 12–14 hours of training in sessions), but M1c
   itself has not run yet.
-- On the Windows PC the Python checks pass, except the web-bundle test, which needs Node and
-  pnpm (not installed there); the symlink storage test skips without the symlink privilege.
+- On the Windows PC the Python checks pass, except the web-bundle test, which runs `pnpm` from
+  PATH; Node 24 is installed there now and `npx --yes pnpm@11.19.0 ...` runs the web checks.
+  The symlink storage test skips without the symlink privilege.
 - Calibration now uses a sqrt class-weighted val (smoke model: test ECE 0.090 → 0.023), but
   that was checked only on a weak smoke model; M1c must confirm it.
 - Photo rounds exist but are opt-in (`GEO_COMPANION_PHOTO_PACK`) and come after the diagrams;
   answers show a country code, not a full name. Showing OSV-5M photos in the app needs kulo's
   confirmation (it was cleared for training). The smoke model abstains on 199 of 200 photos.
+- Photo upload works end to end, but the only real model on the PC (the M1c smoke model,
+  `abstain_below` 1.0) always abstains, so a real top-3 on an upload waits for M1c. Refusing
+  pack photos only catches byte-identical files; a re-saved copy gets through.
 - The starter pack teaches one deliberately easy cue (a named city) and contains no real
   imagery.
 - Storage cleanup for Task 4: the database tables from the original migration are still
