@@ -37,6 +37,7 @@ button:disabled { cursor: not-allowed; opacity: 0.55; }
 .clue, .notice { background: #fff8e6; border-left: 4px solid #c38b3a; padding: 0.5rem 0.8rem; }
 .outcome { font-weight: 700; }
 .fixture { display: block; max-width: 100%; width: 32rem; border: 1px solid #b9c4b7; }
+.fixture.photo { width: 48rem; height: auto; }
 label { display: block; margin-top: 1rem; }
 .model { border: 1px dashed #6b5b45; border-radius: 0.35rem; padding: 0.5rem 1rem; margin: 1rem 0; }
 .model-name { font-weight: 700; }

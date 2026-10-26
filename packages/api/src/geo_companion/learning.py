@@ -33,13 +33,22 @@ QUALITY_SKIPPED = 1
 
 
 class LearningService:
-    """Own one pseudonymous learner's local history and immutable starter content."""
+    """Own one pseudonymous learner's local history and immutable practice content."""
 
     learner_id = "local-learner"
 
-    def __init__(self, database_path: Path, provider: PredictionProvider | None = None) -> None:
+    def __init__(
+        self,
+        database_path: Path,
+        provider: PredictionProvider | None = None,
+        rounds: tuple[PracticeRound, ...] = PRACTICE_ROUNDS,
+    ) -> None:
+        round_ids = [round_.round_id for round_ in rounds]
+        if not rounds or len(set(round_ids)) != len(round_ids):
+            raise ValueError("practice rounds must be non-empty with unique round ids")
         self.database_path = database_path
         self.provider = provider
+        self.rounds = rounds
         self.database_path.parent.mkdir(parents=True, exist_ok=True)
         self._initialize()
 
@@ -91,9 +100,8 @@ class LearningService:
                     "ADD COLUMN reported_issue INTEGER NOT NULL DEFAULT 0"
                 )
 
-    @staticmethod
-    def _round(round_id: str) -> PracticeRound:
-        round_ = next((item for item in PRACTICE_ROUNDS if item.round_id == round_id), None)
+    def _round(self, round_id: str) -> PracticeRound:
+        round_ = next((item for item in self.rounds if item.round_id == round_id), None)
         if round_ is None:
             raise KeyError(round_id)
         return round_
@@ -106,12 +114,12 @@ class LearningService:
                 "ORDER BY rowid DESC LIMIT 1",
                 (self.learner_id,),
             ).fetchone()
-        round_ids = [item.round_id for item in PRACTICE_ROUNDS]
+        round_ids = [item.round_id for item in self.rounds]
         if row is None or row["round_id"] not in round_ids:
             index = 0
         else:
-            index = (round_ids.index(row["round_id"]) + 1) % len(PRACTICE_ROUNDS)
-        return PracticeRoundPublic.from_round(PRACTICE_ROUNDS[index])
+            index = (round_ids.index(row["round_id"]) + 1) % len(self.rounds)
+        return PracticeRoundPublic.from_round(self.rounds[index])
 
     def round_public(self, round_id: str) -> PracticeRoundPublic:
         return PracticeRoundPublic.from_round(self._round(round_id))
@@ -301,7 +309,7 @@ class LearningService:
         return progress
 
     def _schedule_rows(self) -> list[StudyProgress]:
-        known = {item.round_id for item in PRACTICE_ROUNDS}
+        known = {item.round_id for item in self.rounds}
         with self._connect() as connection:
             rows = connection.execute(
                 "SELECT round_id, repetitions, interval_days, ease_factor, last_reviewed_on "

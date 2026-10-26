@@ -96,9 +96,15 @@ class SourceTruthAnswer(ContractModel):
     answer_origin: Literal[AnswerOrigin.SOURCE_TRUTH, AnswerOrigin.AUTHORED]
 
 
+class AssetKind(StrEnum):
+    DIAGRAM = "diagram"
+    PHOTO = "photo"
+
+
 class PracticeRound(ContractModel):
     round_id: str = Field(min_length=1)
     asset_id: str = Field(min_length=1)
+    asset_kind: AssetKind = AssetKind.DIAGRAM
     asset_attribution: Attribution
     asset_description: str = Field(
         default="Original educational practice diagram.",
@@ -114,6 +120,7 @@ class PracticeRoundPublic(ContractModel):
 
     round_id: str
     asset_id: str
+    asset_kind: AssetKind
     asset_attribution: Attribution
     asset_description: str
 
@@ -122,6 +129,7 @@ class PracticeRoundPublic(ContractModel):
         return cls(
             round_id=round_.round_id,
             asset_id=round_.asset_id,
+            asset_kind=round_.asset_kind,
             asset_attribution=round_.asset_attribution,
             asset_description=round_.asset_description,
         )
@@ -371,3 +379,34 @@ class ContentPack(ContractModel):
         if not self.is_publication_ready():
             msg = "Only cleared content may be published or activated."
             raise PublicationError(msg)
+
+
+class PackAsset(ContractModel):
+    """One image file of a local pack, bound to its bytes by SHA-256."""
+
+    asset_id: str = Field(pattern=r"^[a-z0-9][a-z0-9-]*\.jpg$")
+    sha256: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
+
+
+class LocalPhotoPack(ContractModel):
+    """A photo pack built on this machine into application data, never into the repository.
+
+    Its image files sit in ``assets/`` next to the pack file. The app loads it only when asked
+    to, and only after the content hash, the rights and every image hash check out.
+    """
+
+    pack: ContentPack
+    source_dataset: str = Field(min_length=1)
+    assets: tuple[PackAsset, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def every_photo_round_has_one_asset(self) -> LocalPhotoPack:
+        asset_ids = [asset.asset_id for asset in self.assets]
+        if len(set(asset_ids)) != len(asset_ids):
+            raise ValueError("asset ids must be unique")
+        rounds = self.pack.practice_rounds
+        if any(round_.asset_kind is not AssetKind.PHOTO for round_ in rounds):
+            raise ValueError("a photo pack contains photo rounds only")
+        if sorted(round_.asset_id for round_ in rounds) != sorted(asset_ids):
+            raise ValueError("every photo round needs exactly one listed asset")
+        return self

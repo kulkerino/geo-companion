@@ -6,7 +6,7 @@ work that changes it; detailed evidence for each session goes in [`journal/`](jo
 **Last updated:** 2026-10-26
 **Branch:** `feature/model-m1` (Tasks 1–3 are merged into `main`)
 **GitHub:** [kulkerino/geo-companion](https://github.com/kulkerino/geo-companion) (private), remote `origin`; branches `main`, `feature/model-m1`, and the school branch `rocnikovy-projekt`
-**Next step:** M1c on kulo's RTX 3060 PC, following [`docs/runbook-m1c-rtx-3060.md`](docs/runbook-m1c-rtx-3060.md); then the independent M1 review.
+**Next step:** M1c on kulo's RTX 3060 PC, following [`docs/runbook-m1c-rtx-3060.md`](docs/runbook-m1c-rtx-3060.md); then load the M1c model with the photo pack, and the independent M1 review.
 
 ## Task status
 
@@ -21,7 +21,8 @@ work that changes it; detailed evidence for each session goes in [`journal/`](jo
 | Model M1d: ONNX provider in the app | done, self-reviewed | see journal | [2026-10-19](journal/2026-10-19-model-m1d-onnx-provider.md) |
 | Model M1b: first real data and laptop smoke run | done, self-reviewed | see journal | [2026-10-19](journal/2026-10-19-model-m1b-first-real-data.md) |
 | Model M1c prep: calibration fix and RTX 3060 runbook | done, self-reviewed | see journal | [2026-10-19](journal/2026-10-19-model-m1c-prep.md) |
-| Repository cleanup (no behaviour change) | done, draft PR into `feature/model-m1` | see journal | [2026-10-26](journal/2026-10-26-repo-cleanup.md) |
+| Repository cleanup (no behaviour change) | done, PR #2 merged into `feature/model-m1` | see journal | [2026-10-26](journal/2026-10-26-repo-cleanup.md) |
+| Photo rounds from held-out OSV-5M test photos | done, self-reviewed | see journal | [2026-10-26](journal/2026-10-26-photo-rounds.md) |
 | Model M1c: real training on the RTX 3060 PC | ready to run by hand | — | — |
 | 4. Pack lifecycle and source tooling | planned | — | — |
 | 5. Curriculum pipeline | planned | — | — |
@@ -43,6 +44,10 @@ The full plan is in
   labelled placeholder (`dummy-placeholder`, no real inference); `GEO_COMPANION_MODEL=none`
   runs without a model, and `GEO_COMPANION_MODEL=onnx:<manifest>` loads a real exported
   model (see the README).
+- Optional photo rounds: `geo-train photo-pack` builds a local pack from held-out OSV-5M
+  test photos (opaque ids, metadata stripped, credit and place revealed after the answer),
+  and `GEO_COMPANION_PHOTO_PACK=<pack.json>` loads it after hash and rights checks. With an
+  ONNX model, "Compare with model" runs on the round's photo.
 - Everything runs locally: FastAPI on `127.0.0.1:8000`, Vite on `127.0.0.1:5173`, and SQLite
   in the per-user application-data directory (never inside this folder).
 
@@ -62,18 +67,21 @@ The full plan is in
 | 2026-10-19 | Training PC GPU is an RTX 3060; calibration reweights val to the sampler's sqrt prior | journal 2026-10-19 M1c prep |
 | 2026-10-19 | PyTorch, onnx, onnxruntime added as the optional `training` group; training tests skip without it | journal 2026-10-19 M1a |
 | 2026-10-26 | `.obsidian/` is local editor state and no longer tracked | journal 2026-10-26 cleanup |
+| 2026-10-26 | Photo rounds use the OSV-5M test split only; photographer credit shown after the answer; display use pending kulo's OK | journal 2026-10-26 photo rounds |
 
 ## Known gaps
 
 - The dummy model is still the default. `GEO_COMPANION_MODEL=onnx:<manifest>` runs a real
-  exported model, but none is trained yet, and it abstains on starter rounds (SVG diagrams,
-  no photo). Stored predictions are keyed by model id and version, so bump the version on
+  exported model, but only the weak smoke model exists until M1c, and it abstains on starter rounds (SVG
+  diagrams, no photo). Stored predictions are keyed by model id and version, so bump the version on
   every retrain.
 - The laptop has no CUDA GPU, so real training runs on the RTX 3060 PC. Nothing has run on
   Windows or a GPU yet.
 - Calibration now uses a sqrt class-weighted val (smoke model: test ECE 0.090 → 0.023), but
   that was checked only on a weak smoke model; M1c must confirm it.
-- App rounds are diagrams, not photos, so a photo model will be out of distribution there until photo rounds or upload exist.
+- Photo rounds exist but are opt-in (`GEO_COMPANION_PHOTO_PACK`) and come after the diagrams;
+  answers show a country code, not a full name. Showing OSV-5M photos in the app needs kulo's
+  confirmation (it was cleared for training). The smoke model abstains on 199 of 200 photos.
 - The starter pack teaches one deliberately easy cue (a named city) and contains no real
   imagery.
 - Storage cleanup for Task 4: the database tables from the original migration are still

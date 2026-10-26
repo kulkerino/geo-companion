@@ -107,6 +107,9 @@ The report is a deterministic JSON file plus a short Markdown summary. It contai
   not photos. A photo model will be out of distribution on them and should mostly abstain.
   Real use needs photo rounds (cleared images) or photo upload, which is not built yet. M1
   proves the model offline through its report. Photo upload is the natural next milestone.
+  **Update 2026-10-26:** photo rounds now exist. `geo-train photo-pack` builds a local pack
+  from held-out OSV-5M test photos and `GEO_COMPANION_PHOTO_PACK` loads it, so the model sees
+  real photos in the app (see the README and the 2026-10-26 photo-rounds journal entry).
 
 ## Phases
 

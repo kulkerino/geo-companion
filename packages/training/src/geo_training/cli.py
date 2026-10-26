@@ -1,5 +1,5 @@
-"""``geo-train``: fetch OSV-5M, dataset statistics, and a full train → calibrate → evaluate →
-export run.
+"""``geo-train``: fetch OSV-5M, dataset statistics, a full train → calibrate → evaluate →
+export run, and a local photo pack of practice rounds from the held-out test photos.
 
 Only ``fetch`` touches the network, and only when run by hand. Training reads local paths,
 the dataset ledger must be ``cleared``, and every output goes to the application-data
@@ -129,6 +129,31 @@ def _stats(args: argparse.Namespace) -> int:
     return 0
 
 
+def _photo_pack(args: argparse.Namespace) -> int:
+    from geo_training.photo_pack import build_photo_pack, read_photo_records, select_photos
+
+    record = require_cleared(load_record(Path(args.ledger)))
+    out = (
+        Path(args.out)
+        if args.out
+        else application_data_dir() / "packs" / args.pack_id / args.version
+    )
+    if is_inside_repository(out):
+        raise SystemExit(f"Refusing to write a pack inside the repository: {out}")
+    if (out / "pack.json").exists():
+        raise SystemExit(f"{out} already holds a pack; packs are immutable, bump --version.")
+    records = read_photo_records(Path(args.metadata), Path(args.images))
+    photos = select_photos(records, args.rounds, args.min_count, args.seed)
+    if not photos:
+        raise SystemExit("No photos match; check --metadata, --images and --min-count.")
+    local = build_photo_pack(
+        record, photos, out, pack_id=args.pack_id, version=args.version, seed=args.seed
+    )
+    countries = len({round_.answer.country_code for round_ in local.pack.practice_rounds})
+    print(f"Wrote {len(photos)} photo rounds from {countries} countries to {out / 'pack.json'}")
+    return 0
+
+
 def _run(args: argparse.Namespace) -> int:
     import torch
 
@@ -241,6 +266,20 @@ def build_parser() -> argparse.ArgumentParser:
     stats = commands.add_parser("stats", help="summarise the locally available dataset")
     common(stats)
     stats.set_defaults(handler=_stats)
+
+    pack = commands.add_parser(
+        "photo-pack", help="build a local photo pack of practice rounds from test photos"
+    )
+    pack.add_argument("--ledger", required=True, help="dataset rights record (JSON)")
+    pack.add_argument("--metadata", required=True, help="test metadata CSV (never train)")
+    pack.add_argument("--images", required=True, help="directory of <id>.jpg test images")
+    pack.add_argument("--rounds", type=int, default=200)
+    pack.add_argument("--min-count", type=int, default=50, help="photos a country needs")
+    pack.add_argument("--pack-id", default="osv5m-test-photos")
+    pack.add_argument("--version", default="1.0.0")
+    pack.add_argument("--seed", type=int, default=0)
+    pack.add_argument("--out", help="pack directory (default: application data)")
+    pack.set_defaults(handler=_photo_pack)
 
     run = commands.add_parser("run", help="train, calibrate, evaluate and export")
     common(run)
