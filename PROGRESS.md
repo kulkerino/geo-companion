@@ -6,7 +6,7 @@ work that changes it; detailed evidence for each session goes in [`journal/`](jo
 **Last updated:** 2026-10-26
 **Branch:** `feature/model-m1`, draft [PR #3](https://github.com/kulkerino/geo-companion/pull/3) into `main` (Tasks 1–3 are merged into `main`)
 **GitHub:** [kulkerino/geo-companion](https://github.com/kulkerino/geo-companion) (private), remote `origin`; branches `main`, `feature/model-m1`, and the school branch `rocnikovy-projekt`
-**Next step:** M1c on kulo's RTX 3060 PC, following [`docs/runbook-m1c-rtx-3060.md`](docs/runbook-m1c-rtx-3060.md); then load the M1c model with the photo pack, and the independent M1 review.
+**Next step:** M1c training on a weekend while kulo is home (data is already on the RTX 3060 PC; plan for 10–15 hours), following [`docs/runbook-m1c-rtx-3060.md`](docs/runbook-m1c-rtx-3060.md); then load the M1c model with the photo pack, and the independent M1 review.
 
 ## Task status
 
@@ -23,7 +23,7 @@ work that changes it; detailed evidence for each session goes in [`journal/`](jo
 | Model M1c prep: calibration fix and RTX 3060 runbook | done, self-reviewed | see journal | [2026-10-19](journal/2026-10-19-model-m1c-prep.md) |
 | Repository cleanup (no behaviour change) | done, PR #2 merged into `feature/model-m1` | see journal | [2026-10-26](journal/2026-10-26-repo-cleanup.md) |
 | Photo rounds from held-out OSV-5M test photos | done, self-reviewed | see journal | [2026-10-26](journal/2026-10-26-photo-rounds.md) |
-| Model M1c: real training on the RTX 3060 PC | ready to run by hand | — | — |
+| Model M1c: real training on the RTX 3060 PC | set up, data fetched, smoke runs pass; training postponed to a weekend | `bf0c931` | [2026-10-26](journal/2026-10-26-model-m1c-rtx-3060.md) |
 | 4. Pack lifecycle and source tooling | planned | — | — |
 | 5. Curriculum pipeline | planned | — | — |
 | 6. Optional local model | planned | — | — |
