@@ -1,13 +1,16 @@
 """FastAPI entrypoint for the loopback-only local service."""
 
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict
 
 from geo_companion.contracts import (
+    PHOTO_UPLOAD_MAX_BYTES,
+    PHOTO_UPLOAD_MEDIA_TYPES,
     Feedback,
     ModelPredictionResult,
     ModelStatus,
+    PhotoGuessResult,
     PracticeAnswerResult,
     PracticeAnswerSubmission,
     PracticeClue,
@@ -15,8 +18,8 @@ from geo_companion.contracts import (
     StudyProgress,
     StudyReview,
 )
-from geo_companion.learning import LearningService
-from geo_companion.models import provider_from_environment
+from geo_companion.learning import LearningService, PracticePhotoError
+from geo_companion.models import UnreadablePhotoError, provider_from_environment
 from geo_companion.paths import application_data_dir
 from geo_companion.photo_pack import PhotoPack, photo_pack_from_environment
 from geo_companion.starter_pack import PRACTICE_ROUNDS, STARTER_PACK
@@ -53,6 +56,7 @@ def service() -> LearningService:
             application_data_dir() / "runtime.sqlite3",
             provider=provider_from_environment(images=photo_pack),
             rounds=rounds,
+            practice_photo_hashes=frozenset() if photo_pack is None else photo_pack.asset_hashes,
         )
     return learning_service
 
@@ -165,6 +169,74 @@ async def get_model_prediction(attempt_id: str) -> ModelPredictionResult:
             else str(error)
         )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail) from error
+
+
+# The declared content type must match the upload's leading bytes.
+def has_photo_signature(media_type: str, head: bytes) -> bool:
+    if media_type == "image/jpeg":
+        return head.startswith(b"\xff\xd8\xff")
+    if media_type == "image/png":
+        return head.startswith(b"\x89PNG\r\n\x1a\n")
+    return head[:4] == b"RIFF" and head[8:12] == b"WEBP"
+
+
+async def read_photo_upload(request: Request) -> bytes:
+    media_type = request.headers.get("content-type", "").split(";")[0].strip().lower()
+    if media_type not in PHOTO_UPLOAD_MEDIA_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Upload a JPEG, PNG or WebP photo.",
+        )
+    too_large = HTTPException(
+        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+        detail=f"The photo is larger than {PHOTO_UPLOAD_MAX_BYTES // (1024 * 1024)} MB.",
+    )
+    declared = request.headers.get("content-length", "")
+    if declared.isdigit() and int(declared) > PHOTO_UPLOAD_MAX_BYTES:
+        raise too_large
+    data = bytearray()
+    async for chunk in request.stream():
+        data.extend(chunk)
+        if len(data) > PHOTO_UPLOAD_MAX_BYTES:
+            raise too_large
+    if not has_photo_signature(media_type, bytes(data[:12])):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="The file is empty or is not the image type it claims to be.",
+        )
+    return bytes(data)
+
+
+@app.post(
+    "/api/v1/photo-guesses",
+    response_model=PhotoGuessResult,
+    openapi_extra={
+        "requestBody": {
+            "required": True,
+            "content": {
+                media_type: {"schema": {"type": "string", "format": "binary"}}
+                for media_type in PHOTO_UPLOAD_MEDIA_TYPES
+            },
+        }
+    },
+)
+async def guess_photo(request: Request) -> PhotoGuessResult:
+    """Ask the local model about the learner's own photo: a top-3 guess or an abstention.
+
+    The photo is the raw request body. It is held in memory for this request only and is
+    never written to disk or the database.
+    """
+    photo = await read_photo_upload(request)
+    try:
+        return service().photo_guess(photo)
+    except LookupError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+    except PracticePhotoError as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+    except UnreadablePhotoError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(error)
+        ) from error
 
 
 @app.get("/api/v1/study/progress/{round_id}", response_model=StudyProgress)

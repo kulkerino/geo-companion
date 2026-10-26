@@ -55,12 +55,15 @@ export class AsgiBridge {
   readonly fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const id = this.nextId++;
     const url = new URL(String(input), "http://bridge");
+    const body = init?.body instanceof Blob
+      ? { body_base64: Buffer.from(await init.body.arrayBuffer()).toString("base64"), content_type: new Headers(init.headers).get("content-type") }
+      : { body: typeof init?.body === "string" ? init.body : null };
     const reply = new Promise<BridgeResponse>((resolve) => this.pending.set(id, resolve));
     this.child.stdin.write(`${JSON.stringify({
       id,
       method: init?.method ?? "GET",
       path: `${url.pathname}${url.search}`,
-      body: typeof init?.body === "string" ? init.body : null,
+      ...body,
     })}\n`);
     const response = await reply;
     const empty = response.status === 204 || response.body === "";

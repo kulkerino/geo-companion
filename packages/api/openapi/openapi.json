@@ -410,6 +410,40 @@
         "title": "PacksResponse",
         "type": "object"
       },
+      "PhotoGuessResult": {
+        "additionalProperties": false,
+        "description": "The model's opinion on a learner's own photo. Nothing is stored and nothing is graded:\nthe photo has no authored answer, so this is never source truth.",
+        "properties": {
+          "abstained": {
+            "title": "Abstained",
+            "type": "boolean"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/ModelCandidate"
+            },
+            "maxItems": 5,
+            "title": "Candidates",
+            "type": "array"
+          },
+          "model": {
+            "$ref": "#/components/schemas/ModelInfo"
+          },
+          "origin": {
+            "const": "model_prediction",
+            "default": "model_prediction",
+            "title": "Origin",
+            "type": "string"
+          }
+        },
+        "required": [
+          "model",
+          "candidates",
+          "abstained"
+        ],
+        "title": "PhotoGuessResult",
+        "type": "object"
+      },
       "PracticeAnswerResult": {
         "additionalProperties": false,
         "description": "Post-submission reveal with deterministic scoring and a local attempt identity.",
@@ -850,6 +884,48 @@
           }
         },
         "summary": "List Packs"
+      }
+    },
+    "/api/v1/photo-guesses": {
+      "post": {
+        "description": "Ask the local model about the learner's own photo: a top-3 guess or an abstention.\n\nThe photo is the raw request body. It is held in memory for this request only and is\nnever written to disk or the database.",
+        "operationId": "guess_photo_api_v1_photo_guesses_post",
+        "requestBody": {
+          "content": {
+            "image/jpeg": {
+              "schema": {
+                "format": "binary",
+                "type": "string"
+              }
+            },
+            "image/png": {
+              "schema": {
+                "format": "binary",
+                "type": "string"
+              }
+            },
+            "image/webp": {
+              "schema": {
+                "format": "binary",
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhotoGuessResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Guess Photo"
       }
     },
     "/api/v1/practice/attempts/{attempt_id}/model-prediction": {

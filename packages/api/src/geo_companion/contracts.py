@@ -232,16 +232,40 @@ class ModelPredictionResult(ContractModel):
 
     @model_validator(mode="after")
     def candidates_are_ranked_and_consistent(self) -> ModelPredictionResult:
-        if self.abstained != (not self.candidates):
-            msg = "A prediction abstains exactly when it has no candidates."
-            raise ValueError(msg)
-        confidences = [candidate.confidence for candidate in self.candidates]
-        if confidences != sorted(confidences, reverse=True) or sum(confidences) > 1 + 1e-9:
-            msg = "Candidates must be ordered by confidence and sum to at most 1."
-            raise ValueError(msg)
-        if len({candidate.country_code for candidate in self.candidates}) != len(confidences):
-            msg = "Candidate countries must be distinct."
-            raise ValueError(msg)
+        check_candidates(self.candidates, self.abstained)
+        return self
+
+
+def check_candidates(candidates: tuple[ModelCandidate, ...], abstained: bool) -> None:
+    if abstained != (not candidates):
+        msg = "A prediction abstains exactly when it has no candidates."
+        raise ValueError(msg)
+    confidences = [candidate.confidence for candidate in candidates]
+    if confidences != sorted(confidences, reverse=True) or sum(confidences) > 1 + 1e-9:
+        msg = "Candidates must be ordered by confidence and sum to at most 1."
+        raise ValueError(msg)
+    if len({candidate.country_code for candidate in candidates}) != len(confidences):
+        msg = "Candidate countries must be distinct."
+        raise ValueError(msg)
+
+
+# Photos the learner uploads: common camera and web formats, checked by their leading bytes.
+PHOTO_UPLOAD_MEDIA_TYPES = ("image/jpeg", "image/png", "image/webp")
+PHOTO_UPLOAD_MAX_BYTES = 15 * 1024 * 1024
+
+
+class PhotoGuessResult(ContractModel):
+    """The model's opinion on a learner's own photo. Nothing is stored and nothing is graded:
+    the photo has no authored answer, so this is never source truth."""
+
+    model: ModelInfo
+    candidates: tuple[ModelCandidate, ...] = Field(max_length=5)
+    abstained: bool
+    origin: Literal[AnswerOrigin.MODEL_PREDICTION] = AnswerOrigin.MODEL_PREDICTION
+
+    @model_validator(mode="after")
+    def candidates_are_ranked_and_consistent(self) -> PhotoGuessResult:
+        check_candidates(self.candidates, self.abstained)
         return self
 
 
