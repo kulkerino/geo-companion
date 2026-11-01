@@ -59,12 +59,14 @@ describe("App", () => {
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.endsWith("/practice/rounds/next")) return json(++nextCalls === 1 ? round("round-1") : photo);
-      if (url.endsWith("/answers")) return json({ round_id: "round-1", attempt_id: "a-1", is_correct: false, submission: { skipped: true, uncertain: false }, answer: { country_code: "ZZ", coordinate: null, answer_origin: "authored", explanation: "Zedland.", citations: [attribution] }, study_progress: null });
+      if (url.endsWith("/answers")) return json({ round_id: "round-1", attempt_id: "a-1", is_correct: false, submission: { country_code: "CZ", skipped: false, uncertain: false }, answer: { country_code: "SK", coordinate: null, answer_origin: "authored", explanation: "Slovakia.", citations: [attribution] }, study_progress: null });
       return json({ active: null });
     }));
     render(<App />);
     expect(await screen.findByRole("img", { name: "Diagram round-1" })).toHaveAttribute("src", "/starter-assets/round-1.svg");
     fireEvent.click(screen.getByRole("button", { name: "Skip" }));
+    expect(await screen.findByText("Slovakia (SK)")).toBeInTheDocument();
+    expect(screen.getByText(/you guessed Czechia \(CZ\)/)).toBeInTheDocument();
     fireEvent.click(await screen.findByRole("button", { name: "Next round" }));
     expect(await screen.findByRole("img", { name: "Street-level photo" })).toHaveAttribute("src", "/api/v1/assets/ab12.jpg");
     expect(screen.getByLabelText("Photo attribution")).toBeInTheDocument();
@@ -96,7 +98,7 @@ describe("App", () => {
     fireEvent.click(ask);
 
     const guess = await screen.findByLabelText("Model guess for your photo");
-    expect(guess).toHaveTextContent("PT · 41%");
+    expect(guess).toHaveTextContent("Portugal (PT) · 41%");
     expect(guess).toHaveTextContent("placeholder, not real inference");
     expect(uploads).toEqual([{ type: "image/jpeg", body: photo }]);
   });

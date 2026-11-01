@@ -25,6 +25,7 @@ work that changes it; detailed evidence for each session goes in [`journal/`](jo
 | Photo rounds from held-out OSV-5M test photos | done, self-reviewed | see journal | [2026-10-26](journal/2026-10-26-photo-rounds.md) |
 | Model M1c: real training on the RTX 3060 PC | in progress: 5 of 16 epochs done (val top-1 0.602), resumable from `last.pt` | `bf0c931`, see journal | [2026-10-26](journal/2026-10-26-model-m1c-rtx-3060.md) |
 | Photo upload: the model's top-3 guess or abstention on your own photo | done, self-reviewed; draft PR into `feature/model-m1` | see journal | [2026-10-26](journal/2026-10-26-photo-upload.md) |
+| OSV-5M photo display OK; full country names after the answer | done, self-reviewed | see journal | [2026-11-01](journal/2026-11-01-photo-display-ok-country-names.md) |
 | 4. Pack lifecycle and source tooling | planned | — | — |
 | 5. Curriculum pipeline | planned | — | — |
 | 6. Optional local model | planned | — | — |
@@ -75,6 +76,8 @@ The full plan is in
 | 2026-10-26 | The GitHub repo stays public (kulo: the professor needs it) | journal 2026-10-26 photo upload |
 | 2026-10-26 | Uploaded photos are kept in memory for one request, never stored, never graded; pack photos are refused byte for byte | journal 2026-10-26 photo upload |
 | 2026-10-26 | M1c runs only while kulo is home: training is resumable (`--resume`, `--max-hours`) and split into sessions | journal 2026-10-26 M1c |
+| 2026-11-01 | OSV-5M photos cleared for display in the app too (kulo: "i mean yea sure"); photos stay in app data, never in the repo | journal 2026-11-01 photo display OK |
+| 2026-11-01 | Countries are shown as `Name (CODE)` after the answer, via the browser's offline `Intl.DisplayNames` | journal 2026-11-01 photo display OK |
 
 ## Known gaps
 
@@ -90,9 +93,8 @@ The full plan is in
   The symlink storage test skips without the symlink privilege.
 - Calibration now uses a sqrt class-weighted val (smoke model: test ECE 0.090 → 0.023), but
   that was checked only on a weak smoke model; M1c must confirm it.
-- Photo rounds exist but are opt-in (`GEO_COMPANION_PHOTO_PACK`) and come after the diagrams;
-  answers show a country code, not a full name. Showing OSV-5M photos in the app needs kulo's
-  confirmation (it was cleared for training). The smoke model abstains on 199 of 200 photos.
+- Photo rounds are opt-in (`GEO_COMPANION_PHOTO_PACK`) and come after the diagrams; guesses
+  are still typed as two-letter codes. The smoke model abstains on 199 of 200 photos.
 - Photo upload works end to end, but the only real model on the PC (the M1c smoke model,
   `abstain_below` 1.0) always abstains, so a real top-3 on an upload waits for M1c. Refusing
   pack photos only catches byte-identical files; a re-saved copy gets through.

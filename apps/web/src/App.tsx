@@ -21,6 +21,19 @@ function message(error: unknown) {
   return error instanceof Error ? error.message : "The local learning service is unavailable.";
 }
 
+// The browser's built-in region names work offline; the code stays visible for typing guesses.
+const regionNames = new Intl.DisplayNames(["en"], { type: "region", fallback: "code" });
+
+function country(code: string) {
+  let name: string | undefined;
+  try {
+    name = regionNames.of(code);
+  } catch {
+    name = undefined;
+  }
+  return name && name !== code ? `${name} (${code})` : code;
+}
+
 function days(count: number) {
   return `${count} ${count === 1 ? "day" : "days"}`;
 }
@@ -73,7 +86,7 @@ function ModelOpinion({ label, model, candidates, abstained, note }: { label: st
       <p className="origin">{model.description}</p>
       {abstained ? <p>The model abstained: it was not confident enough to guess.</p> : (
         <ol>
-          {candidates.map((candidate) => <li key={candidate.country_code}>{candidate.country_code} · {Math.round(candidate.confidence * 100)}%</li>)}
+          {candidates.map((candidate) => <li key={candidate.country_code}>{country(candidate.country_code)} · {Math.round(candidate.confidence * 100)}%</li>)}
         </ol>
       )}
       <p className="origin">{note}</p>
@@ -141,7 +154,7 @@ function outcome(reveal: PracticeAnswerResult) {
   const confidence = reveal.submission.uncertain ? " (marked uncertain)" : "";
   return reveal.is_correct
     ? `Correct${confidence}.`
-    : `Not correct${confidence}: you guessed ${reveal.submission.country_code ?? "nothing"}.`;
+    : `Not correct${confidence}: you guessed ${reveal.submission.country_code ? country(reveal.submission.country_code) : "nothing"}.`;
 }
 
 function App() {
@@ -257,7 +270,7 @@ function App() {
             </div>
           </div> : <div className="result">
             <p className="outcome">{outcome(reveal)}</p>
-            <p>Answer: <strong>{reveal.answer.country_code}</strong></p>
+            <p>Answer: <strong>{country(reveal.answer.country_code)}</strong></p>
             <p>{reveal.answer.explanation}</p>
             <p className="origin">Answer origin: {reveal.answer.answer_origin}. Your feedback and reports are stored separately and never change it.</p>
             {reveal.answer.citations.map((citation, index) => <AttributionDetails key={index} attribution={citation} label="Answer citation" />)}

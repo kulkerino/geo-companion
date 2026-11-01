@@ -60,8 +60,8 @@ describe("App with the real API and SQLite", () => {
     // A wrong confident guess is scored by the API and reveals the authored target.
     fireEvent.change(screen.getByLabelText(/Country-code guess/), { target: { value: "cz" } });
     fireEvent.click(screen.getByRole("button", { name: "Submit guess" }));
-    expect(await screen.findByText("Not correct: you guessed CZ.")).toBeInTheDocument();
-    expect(screen.getByText("SK")).toBeInTheDocument();
+    expect(await screen.findByText("Not correct: you guessed Czechia (CZ).")).toBeInTheDocument();
+    expect(screen.getByText("Slovakia (SK)")).toBeInTheDocument();
     expect(screen.getByText(/Authored teaching target: Slovakia\. Cue: the place-name panel reads BRATISLAVA/)).toBeInTheDocument();
     expect(screen.getByLabelText("Answer citation")).toHaveTextContent("cleared");
     expect(screen.getByText(`Next review of starter-place-01 on ${utcDate(1)} (interval 1 day, ease 2.18).`)).toBeInTheDocument();
@@ -70,8 +70,8 @@ describe("App with the real API and SQLite", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Compare with model" }));
     const comparison = await screen.findByLabelText("Model comparison");
     expect(comparison).toHaveTextContent("dummy-placeholder 0.1.0 (placeholder, not real inference)");
-    expect(within(comparison).getAllByRole("listitem").map((item) => item.textContent)).toEqual(["CH · 27%", "PT · 19%", "BG · 13%"]);
-    expect(screen.getByText("SK")).toBeInTheDocument();
+    expect(within(comparison).getAllByRole("listitem").map((item) => item.textContent)).toEqual(["Switzerland (CH) · 27%", "Portugal (PT) · 19%", "Bulgaria (BG) · 13%"]);
+    expect(screen.getByText("Slovakia (SK)")).toBeInTheDocument();
 
     // The report is stored against this exact attempt in SQLite and leaves the answer untouched.
     fireEvent.click(screen.getByRole("button", { name: "Report issue" }));
