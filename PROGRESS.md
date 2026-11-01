@@ -3,7 +3,7 @@
 The current state of the project at a glance. Update this file in the same commit as any
 work that changes it; detailed evidence for each session goes in [`journal/`](journal/).
 
-**Last updated:** 2026-10-26
+**Last updated:** 2026-11-01
 **Branch:** `feature/model-m1`, draft [PR #3](https://github.com/kulkerino/geo-companion/pull/3) into `main` (Tasks 1–3 are merged into `main`); photo upload is on `feature/photo-upload`, a draft PR into `feature/model-m1`
 **GitHub:** [kulkerino/geo-companion](https://github.com/kulkerino/geo-companion) (public, because the professor needs access), remote `origin`; branches `main`, `feature/model-m1`, `feature/photo-upload`, and the school branch `rocnikovy-projekt`
 **Next step:** M1c training in sessions while kulo is home (data is already on the RTX 3060 PC; about 12–14 hours in total, resumable), following [`docs/runbook-m1c-rtx-3060.md`](docs/runbook-m1c-rtx-3060.md); then load the M1c model with the photo pack, and the independent M1 review.
@@ -23,7 +23,7 @@ work that changes it; detailed evidence for each session goes in [`journal/`](jo
 | Model M1c prep: calibration fix and RTX 3060 runbook | done, self-reviewed | see journal | [2026-10-19](journal/2026-10-19-model-m1c-prep.md) |
 | Repository cleanup (no behaviour change) | done, PR #2 merged into `feature/model-m1` | see journal | [2026-10-26](journal/2026-10-26-repo-cleanup.md) |
 | Photo rounds from held-out OSV-5M test photos | done, self-reviewed | see journal | [2026-10-26](journal/2026-10-26-photo-rounds.md) |
-| Model M1c: real training on the RTX 3060 PC | set up, data fetched, smoke runs pass, training made resumable; the run itself is postponed | `bf0c931`, see journal | [2026-10-26](journal/2026-10-26-model-m1c-rtx-3060.md) |
+| Model M1c: real training on the RTX 3060 PC | in progress: 5 of 16 epochs done (val top-1 0.602), resumable from `last.pt` | `bf0c931`, see journal | [2026-10-26](journal/2026-10-26-model-m1c-rtx-3060.md) |
 | Photo upload: the model's top-3 guess or abstention on your own photo | done, self-reviewed; draft PR into `feature/model-m1` | see journal | [2026-10-26](journal/2026-10-26-photo-upload.md) |
 | 4. Pack lifecycle and source tooling | planned | — | — |
 | 5. Curriculum pipeline | planned | — | — |
