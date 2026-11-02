@@ -9,16 +9,19 @@ imported when ``GEO_COMPANION_MODEL=onnx:<manifest>`` asks for it.
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Literal, Protocol
 
 import numpy as np
 import onnxruntime  # type: ignore[import-untyped]
 from PIL import Image
 
 from geo_companion.contracts import (
+    CountryAccuracy,
     CountryModelManifest,
     ModelCandidate,
+    ModelEvaluation,
     ModelInfo,
     PracticeRoundPublic,
 )
@@ -27,6 +30,9 @@ from geo_companion.models import UnreadablePhotoError
 from geo_companion.paths import is_inside_repository
 
 TOP_K = 3
+REPORT_FILE = "report.json"
+# Manifest evaluation keys that describe the run rather than a result in the report.
+RUN_KEYS = frozenset({"split", "calibration"})
 
 
 class ModelIntegrityError(RuntimeError):
@@ -90,6 +96,11 @@ class OnnxCountryProvider:
             ),
         )
 
+        self._evaluation = _evaluation(self.manifest, self.info, manifest_path.parent)
+
+    def evaluation(self) -> ModelEvaluation | None:
+        return self._evaluation
+
     def predict(self, round_: PracticeRoundPublic) -> tuple[ModelCandidate, ...]:
         path = self._images.image_path(round_)
         return () if path is None else self.predict_image(path)
@@ -120,3 +131,49 @@ class OnnxCountryProvider:
             for index, confidence in ranked
             if confidence > 0
         )
+
+
+def _evaluation(
+    manifest: CountryModelManifest, info: ModelInfo, folder: Path
+) -> ModelEvaluation | None:
+    """Build the accuracy summary from the manifest, adding per-country rows from the run's
+    ``report.json`` only when one of its splits matches the manifest summary exactly.
+
+    The manifest is bound to the artifact by hash; the report is not, so a report that
+    disagrees with the manifest is ignored rather than trusted. A manifest whose summary is
+    incomplete (an early smoke run, say) has no evaluation, and the model still works.
+    """
+    summary = {k: v for k, v in manifest.evaluation.items() if k not in RUN_KEYS}
+    declared = manifest.evaluation.get("split")
+    split: Literal["test", "val", "unknown"] = (
+        "test" if declared == "test" else "val" if declared == "val" else "unknown"
+    )
+    names: tuple[Literal["test", "val"], ...] = ("test", "val") if split == "unknown" else (split,)
+    per_country: dict[str, Any] = {}
+    try:
+        report = json.loads((folder / REPORT_FILE).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        report = None
+    for name in names:
+        candidate = report.get(name) if isinstance(report, dict) else None
+        if not isinstance(candidate, dict):
+            continue
+        rows = candidate.get("per_country")
+        if {k: v for k, v in candidate.items() if k != "per_country"} == summary:
+            split = name
+            per_country = rows if isinstance(rows, dict) else {}
+            break
+    try:
+        return ModelEvaluation(
+            model=info,
+            split=split,
+            per_country=tuple(
+                CountryAccuracy(country_code=code, **row) for code, row in per_country.items()
+            ),
+            trained_on=manifest.trained_on,
+            dataset_license=manifest.dataset_license,
+            dataset_attribution=manifest.dataset_attribution,
+            **summary,
+        )
+    except (TypeError, ValueError):
+        return None

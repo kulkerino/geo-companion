@@ -121,6 +121,50 @@ describe("App", () => {
     expect(screen.queryByLabelText("Model guess for your photo")).not.toBeInTheDocument();
   });
 
+  it("shows the model's recorded accuracy, best countries first", async () => {
+    const model = { model_id: "country-net", version: "1.0.0", runtime: "onnx", is_placeholder: false, description: "Real model.", required_for_learning: false };
+    const evaluation = {
+      model, split: "test", images: 17000, classes: 101, out_of_label_set: 3000, top1: 0.761, top5: 0.912,
+      ece_raw: 0.09, ece_calibrated: 0.023, temperature: 1.2,
+      abstention: { threshold: 0.5, coverage: 0.42, selective_top1: 0.93 },
+      baselines: { majority_class: "US", majority_top1: 0.131, uniform_top1: 0.0099 },
+      per_country: [{ country_code: "BR", images: 400, top1: 0.6 }, { country_code: "JP", images: 300, top1: 0.9 }],
+      trained_on: "osv5m", dataset_license: "CC BY-SA 4.0", dataset_attribution: "Trained on OpenStreetView-5M.",
+    };
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/practice/rounds/next")) return json(round("round-1"));
+      if (url.endsWith("/models")) return json({ active: model });
+      if (url.endsWith("/models/evaluation")) return json(evaluation);
+      return json({ detail: "Unexpected request" }, 500);
+    }));
+    render(<App />);
+    await screen.findByRole("img", { name: "Diagram round-1" });
+    fireEvent.click(screen.getByRole("button", { name: "Model accuracy" }));
+
+    const summary = await screen.findByLabelText("Accuracy summary");
+    expect(summary).toHaveTextContent("76.1% (top-1)");
+    expect(summary).toHaveTextContent("Always guessing United States (US)13.1%");
+    expect(summary).toHaveTextContent("42.0%; it abstains on the rest");
+    expect(screen.getByText(/17,000 held-out test photos from 101 countries/)).toBeInTheDocument();
+    const rows = screen.getAllByRole("row").slice(1).map((row) => row.textContent);
+    expect(rows).toEqual(["Japan (JP)300 90.0%", "Brazil (BR)400 60.0%"]);
+  });
+
+  it("explains when the model has no recorded accuracy", async () => {
+    const model = { model_id: "dummy-placeholder", version: "0.1.0", runtime: "dummy", is_placeholder: true, description: "Placeholder.", required_for_learning: false };
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/practice/rounds/next")) return json(round("round-1"));
+      if (url.endsWith("/models")) return json({ active: model });
+      return json({ detail: "The enabled model has no recorded evaluation." }, 404);
+    }));
+    render(<App />);
+    await screen.findByRole("img", { name: "Diagram round-1" });
+    fireEvent.click(screen.getByRole("button", { name: "Model accuracy" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("no recorded evaluation");
+  });
+
   it("shows an unreachable local service as an error", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => { throw new TypeError("Failed to fetch"); }));
     render(<App />);

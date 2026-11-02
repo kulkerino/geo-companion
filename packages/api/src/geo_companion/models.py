@@ -14,7 +14,12 @@ import random
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol
 
-from geo_companion.contracts import ModelCandidate, ModelInfo, PracticeRoundPublic
+from geo_companion.contracts import (
+    ModelCandidate,
+    ModelEvaluation,
+    ModelInfo,
+    PracticeRoundPublic,
+)
 
 if TYPE_CHECKING:
     from geo_companion.onnx_provider import RoundImageSource
@@ -47,6 +52,10 @@ class PredictionProvider(Protocol):
         """
         ...
 
+    def evaluation(self) -> ModelEvaluation | None:
+        """Held-out results recorded at training time, or None when there are none."""
+        ...
+
 
 class DummyProvider:
     """Deterministic placeholder: seeded scores over a fixed label set, no inference."""
@@ -70,6 +79,9 @@ class DummyProvider:
         # Seeded by the file's hash: the same photo gets the same placeholder answer, and the
         # pixels are never looked at.
         return self._seeded(f"{self.info.model_id}:{self.info.version}:upload:".encode() + photo)
+
+    def evaluation(self) -> ModelEvaluation | None:
+        return None  # A placeholder has no held-out results to report.
 
     def _seeded(self, seed_bytes: bytes) -> tuple[ModelCandidate, ...]:
         seed = int.from_bytes(hashlib.sha256(seed_bytes).digest()[:8], "big")

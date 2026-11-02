@@ -41,3 +41,8 @@ button:disabled { cursor: not-allowed; opacity: 0.55; }
 label { display: block; margin-top: 1rem; }
 .model { border: 1px dashed #6b5b45; border-radius: 0.35rem; padding: 0.5rem 1rem; margin: 1rem 0; }
 .model-name { font-weight: 700; }
+.accuracy { border-collapse: collapse; margin: 1rem 0; width: 100%; }
+.accuracy caption { text-align: left; font-weight: 700; margin-bottom: 0.4rem; }
+.accuracy th, .accuracy td { text-align: left; padding: 0.25rem 0.6rem 0.25rem 0; border-bottom: 1px solid #d6ddd4; }
+.accuracy th[scope="row"] { font-weight: 400; }
+.bar { display: inline-block; height: 0.7rem; background: #3a6a52; border-radius: 0.15rem; vertical-align: middle; }

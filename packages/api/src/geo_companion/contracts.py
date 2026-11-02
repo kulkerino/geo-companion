@@ -334,6 +334,54 @@ class CountryModelManifest(ModelManifest):
     evaluation: dict[str, Any]
 
 
+Rate = Annotated[float, Field(ge=0, le=1)]
+
+
+class AbstentionSummary(ContractModel):
+    threshold: float = Field(ge=0, le=1)
+    coverage: Rate
+    selective_top1: Rate | None = Field(
+        default=None, description="Accuracy on the images the model answered; null if none."
+    )
+
+
+class EvaluationBaselines(ContractModel):
+    majority_class: str = Field(pattern=r"^[A-Z]{2}$")
+    majority_top1: Rate
+    uniform_top1: Rate
+
+
+class CountryAccuracy(ContractModel):
+    country_code: str = Field(pattern=r"^[A-Z]{2}$")
+    images: int = Field(gt=0)
+    top1: Rate
+
+
+class ModelEvaluation(ContractModel):
+    """Held-out results recorded when the enabled model was trained; read-only, offline.
+
+    The summary comes from the hash-checked manifest. Per-country rows come from the run's
+    ``report.json`` and are shown only when that report agrees with the manifest.
+    """
+
+    model: ModelInfo
+    split: Literal["test", "val", "unknown"]
+    images: int = Field(gt=0)
+    classes: int = Field(ge=2)
+    out_of_label_set: int = Field(ge=0)
+    top1: Rate
+    top5: Rate
+    ece_raw: Rate
+    ece_calibrated: Rate
+    temperature: float = Field(gt=0)
+    abstention: AbstentionSummary
+    baselines: EvaluationBaselines
+    per_country: tuple[CountryAccuracy, ...] = ()
+    trained_on: str = Field(min_length=1)
+    dataset_license: str = Field(min_length=1)
+    dataset_attribution: str = Field(min_length=1)
+
+
 class ModelArtifactReference(ContractModel):
     """Immutable identity used to bind experiments to an exact model artifact."""
 
