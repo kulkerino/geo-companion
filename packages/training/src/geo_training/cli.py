@@ -15,6 +15,7 @@ from collections import Counter
 from collections.abc import Sequence
 from pathlib import Path
 
+from geo_companion.geoguessr_countries import GEOGUESSR_COUNTRIES
 from geo_companion.paths import application_data_dir, is_inside_repository
 
 from geo_training.fetch import (
@@ -173,6 +174,8 @@ def _run(args: argparse.Namespace) -> int:
     samples = deterministic_subset(
         list(read_samples(Path(args.metadata), Path(args.images))), args.max_images
     )
+    if args.geoguessr_only:
+        samples = [s for s in samples if s.country in GEOGUESSR_COUNTRIES]
     train_samples, val_samples = split_train_val(samples, args.val_fraction)
     classes = select_classes(train_samples, args.min_count)
     if len(classes) < 2:
@@ -248,6 +251,40 @@ def _run(args: argparse.Namespace) -> int:
     )
     torch.save(model.state_dict(), out_dir / "final.pt")
     print(json.dumps({"out_dir": str(out_dir), "onnx_parity": parity, **summary}, indent=2))
+    return 0
+
+
+def _regrade(args: argparse.Namespace) -> int:
+    """Re-measure a finished run as the app now uses it: GeoGuessr countries only."""
+    import torch
+
+    from geo_training.evaluate import report, restrict_classes
+    from geo_training.model import CountryNet
+    from geo_training.train import SampleDataset, predict_logits, resolve_device
+
+    run_dir = Path(args.run_dir)
+    config = json.loads((run_dir / "config.json").read_text(encoding="utf-8"))
+    manifest = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
+    classes: list[str] = config["classes"]
+    device = resolve_device(args.device)
+    model = CountryNet(len(classes), width=config["width"])
+    model.load_state_dict(torch.load(run_dir / "final.pt", map_location="cpu"))
+    model.to(device)
+    samples = list(read_samples(Path(args.test_metadata), Path(args.test_images)))
+    dataset = SampleDataset(samples, classes, config["image_size"], False, config["seed"])
+    logits, labels = predict_logits(model, dataset, args.batch_size, device, args.workers)
+    logits, labels, kept, dropped = restrict_classes(logits, labels, classes, GEOGUESSR_COUNTRIES)
+    majority_index = int(torch.bincount(labels, minlength=len(kept)).argmax())
+    result = report(
+        logits, labels, kept, manifest["temperature"], manifest["abstain_below"],
+        kept[majority_index],
+        sum(1 for s in samples if s.country in GEOGUESSR_COUNTRIES and s.country not in classes),
+    )  # fmt: skip
+    result["dropped_non_geoguessr_images"] = dropped
+    out = run_dir / "report-geoguessr.json"
+    out.write_text(json.dumps(result, indent=2), encoding="utf-8")
+    summary = {k: v for k, v in result.items() if k != "per_country"}
+    print(json.dumps({"written": str(out), **summary}, indent=2))
     return 0
 
 
@@ -327,7 +364,23 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         help="pause after the last epoch that fits in this many hours; continue with --resume",
     )
+    run.add_argument(
+        "--geoguessr-only",
+        action="store_true",
+        help="train only on countries with official GeoGuessr coverage",
+    )
     run.set_defaults(handler=_run)
+
+    regrade = commands.add_parser(
+        "regrade", help="re-measure a finished run on GeoGuessr countries only (as the app plays)"
+    )
+    regrade.add_argument("--run-dir", required=True)
+    regrade.add_argument("--test-metadata", required=True)
+    regrade.add_argument("--test-images", required=True)
+    regrade.add_argument("--batch-size", type=int, default=128)
+    regrade.add_argument("--workers", type=int, default=4)
+    regrade.add_argument("--device", default="auto")
+    regrade.set_defaults(handler=_regrade)
     return parser
 
 

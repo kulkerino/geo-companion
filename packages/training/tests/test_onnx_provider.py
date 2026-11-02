@@ -250,3 +250,29 @@ def test_evaluation_api_serves_results_and_404s_without_them(
     response = get("/api/v1/models/evaluation")
     assert response.status_code == 404
     assert response.json()["detail"] == "The enabled model has no recorded evaluation."
+
+
+def test_provider_never_answers_a_country_geoguessr_does_not_cover(tmp_path: Path) -> None:
+    manifest, model = export_tiny_model(tmp_path)
+    data = json.loads(manifest.read_text())
+    data["classes"] = ["BR", "CN", "SJ", "KE"]  # China and Svalbard are not in GeoGuessr
+    manifest.write_text(json.dumps(data))
+    photo = write_photo(tmp_path / "photo.png")
+
+    candidates = OnnxCountryProvider(manifest).predict_image(photo)
+
+    with torch.no_grad():
+        logits = model(torch.from_numpy(eval_array(Image.open(photo).convert("RGB"), SIZE))[None])
+    masked = (logits[0] / 1.5)[[0, 3]].softmax(0)
+    expected = ["BR", "KE"] if masked[0] >= masked[1] else ["KE", "BR"]
+    assert [c.country_code for c in candidates] == expected
+    assert sum(c.confidence for c in candidates) == pytest.approx(1.0, abs=2e-3)
+
+
+def test_provider_refuses_a_model_without_any_geoguessr_country(tmp_path: Path) -> None:
+    manifest, _ = export_tiny_model(tmp_path)
+    data = json.loads(manifest.read_text())
+    data["classes"] = ["CN", "SJ", "AZ", "PW"]
+    manifest.write_text(json.dumps(data))
+    with pytest.raises(ModelIntegrityError, match="GeoGuessr"):
+        OnnxCountryProvider(manifest)

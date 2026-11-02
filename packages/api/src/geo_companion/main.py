@@ -25,6 +25,7 @@ from geo_companion.contracts import (
     StudyProgress,
     StudyReview,
 )
+from geo_companion.geoguessr_countries import GEOGUESSR_COUNTRIES
 from geo_companion.learning import LearningService, PracticePhotoError
 from geo_companion.models import UnreadablePhotoError, provider_from_environment
 from geo_companion.paths import application_data_dir
@@ -61,6 +62,8 @@ def service() -> LearningService:
     if learning_service is None:
         photo_pack = photo_pack_from_environment()
         rounds = PRACTICE_ROUNDS if photo_pack is None else PRACTICE_ROUNDS + photo_pack.rounds
+        # Older packs were drawn from every OSV-5M country; play only GeoGuessr's.
+        rounds = tuple(r for r in rounds if r.answer.country_code in GEOGUESSR_COUNTRIES)
         learning_service = LearningService(
             application_data_dir() / "runtime.sqlite3",
             provider=provider_from_environment(images=photo_pack),

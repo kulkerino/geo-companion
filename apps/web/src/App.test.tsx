@@ -58,7 +58,8 @@ describe("App", () => {
     const options = [...container.querySelectorAll("#country-options option")].map((option) => option.getAttribute("value"));
     expect(guess).toHaveAttribute("list", "country-options");
     expect(options).toContain("Slovakia (SK)");
-    expect(options.length).toBeGreaterThan(200);
+    expect(options).toHaveLength(109); // GeoGuessr countries only
+    expect(options).not.toContain("China (CN)");
 
     fireEvent.change(guess, { target: { value: "Slovakia (SK)" } });
     expect(screen.getByRole("button", { name: "Submit guess" })).toBeEnabled();

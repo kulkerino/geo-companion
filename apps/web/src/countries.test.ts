@@ -3,11 +3,12 @@ import { describe, expect, it } from "vitest";
 import { COUNTRY_CODES, COUNTRY_OPTIONS, country, parseCountryGuess } from "./countries";
 
 describe("countries", () => {
-  it("lists every ISO 3166-1 alpha-2 code plus Kosovo, once each", () => {
-    expect(COUNTRY_CODES).toHaveLength(250);
-    expect(new Set(COUNTRY_CODES).size).toBe(250);
+  it("lists only the 109 countries with official GeoGuessr coverage, once each", () => {
+    expect(COUNTRY_CODES).toHaveLength(109);
+    expect(new Set(COUNTRY_CODES).size).toBe(109);
     expect(COUNTRY_CODES.every((code) => /^[A-Z]{2}$/.test(code))).toBe(true);
-    expect(COUNTRY_CODES).toContain("XK");
+    for (const missing of ["CN", "SJ", "AZ", "PW", "AQ"]) expect(COUNTRY_CODES).not.toContain(missing);
+    expect(COUNTRY_CODES).toContain("EC");
   });
 
   it("offers every country as 'Name (CODE)', sorted by name", () => {
@@ -30,6 +31,8 @@ describe("countries", () => {
     expect(parseCountryGuess("Slov")).toBeNull();
     expect(parseCountryGuess("ZZ")).toBeNull();
     expect(parseCountryGuess("Narnia (ZZ)")).toBeNull();
+    expect(parseCountryGuess("China")).toBeNull();
+    expect(parseCountryGuess("Azerbaijan (AZ)")).toBeNull();
     expect(parseCountryGuess("1")).toBeNull();
   });
 });

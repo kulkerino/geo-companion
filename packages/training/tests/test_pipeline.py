@@ -52,6 +52,14 @@ def test_end_to_end_run_trains_calibrates_evaluates_and_exports(
     (logits,) = session.run(["logits"], {"image": eval_array(image, 32)[None]})
     assert manifest.classes[int(np.argmax(logits))] == "JP"
 
+    # Re-measuring on GeoGuessr countries only changes nothing when all of them are covered.
+    regrade = ["regrade", "--run-dir", str(out), "--test-metadata", str(test_metadata),
+               "--test-images", str(test_images), "--workers", "0", "--device", "cpu"]  # fmt: skip
+    assert main(regrade) == 0
+    regraded = json.loads((out / "report-geoguessr.json").read_text())
+    assert regraded["dropped_non_geoguessr_images"] == 0
+    assert regraded["top1"] == test["top1"] and regraded["classes"] == 3
+
 
 def test_run_refuses_a_dataset_that_is_not_cleared(tmp_path: Path) -> None:
     metadata, images = write_synthetic_split(tmp_path / "train", per_country=5, seed=1)
