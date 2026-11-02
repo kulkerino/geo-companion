@@ -152,6 +152,15 @@ describe("App with the real API and SQLite", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   }, 60_000);
 
+  it("keeps race mode off with the placeholder model and says why", async () => {
+    await startApi(freshDataDir());
+    render(<App />);
+    await screen.findByRole("img", { name: /BRATISLAVA/ });
+    fireEvent.click(screen.getByRole("button", { name: "Race the model" }));
+    expect(await screen.findByText("Race mode needs a real model; the placeholder model cannot race.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start race" })).toBeDisabled();
+  }, 60_000);
+
   it("shows the real API failure instead of fabricating a round", async () => {
     // A file where the data directory should be makes the real service fail to open SQLite.
     const blocked = join(freshDataDir(), "not-a-directory");

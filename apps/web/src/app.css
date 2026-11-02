@@ -24,7 +24,7 @@ body {
 }
 
 .tabs, .actions { display: flex; flex-wrap: wrap; gap: 0.65rem; margin: 1rem 0; }
-button, input { font: inherit; border: 1px solid #3a6a52; border-radius: 0.35rem; padding: 0.55rem 0.8rem; }
+button, input, select { font: inherit; border: 1px solid #3a6a52; border-radius: 0.35rem; padding: 0.55rem 0.8rem; }
 button { background: #e0eddf; color: #17231c; cursor: pointer; }
 button:hover, button:focus-visible { outline: 3px solid #c38b3a; outline-offset: 2px; }
 button[aria-pressed="true"] { background: #3a6a52; color: #fff; }
@@ -46,3 +46,6 @@ label { display: block; margin-top: 1rem; }
 .accuracy th, .accuracy td { text-align: left; padding: 0.25rem 0.6rem 0.25rem 0; border-bottom: 1px solid #d6ddd4; }
 .accuracy th[scope="row"] { font-weight: 400; }
 .bar { display: inline-block; height: 0.7rem; background: #3a6a52; border-radius: 0.15rem; vertical-align: middle; }
+.race-sides { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 1rem; }
+.race-side { border: 1px solid #d6ddd4; border-radius: 0.35rem; padding: 0.4rem 0.8rem; }
+.race-clock { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; }
