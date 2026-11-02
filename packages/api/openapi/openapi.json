@@ -795,6 +795,393 @@
         "title": "PracticeRoundPublic",
         "type": "object"
       },
+      "RaceAvailability": {
+        "additionalProperties": false,
+        "description": "Whether a race can start now; ``reason`` says why not, in words for the learner.",
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "available"
+        ],
+        "title": "RaceAvailability",
+        "type": "object"
+      },
+      "RaceRoundPublic": {
+        "additionalProperties": false,
+        "description": "One race round before the answer: the public round only, never its answer.",
+        "properties": {
+          "position": {
+            "minimum": 1.0,
+            "title": "Position",
+            "type": "integer"
+          },
+          "race_id": {
+            "minLength": 1,
+            "title": "Race Id",
+            "type": "string"
+          },
+          "round": {
+            "$ref": "#/components/schemas/PracticeRoundPublic"
+          },
+          "rounds_total": {
+            "minimum": 1.0,
+            "title": "Rounds Total",
+            "type": "integer"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "time_limit_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Limit Seconds"
+          }
+        },
+        "required": [
+          "race_id",
+          "position",
+          "rounds_total",
+          "round",
+          "started_at"
+        ],
+        "title": "RaceRoundPublic",
+        "type": "object"
+      },
+      "RaceRoundResult": {
+        "additionalProperties": false,
+        "description": "The reveal of one race round: the answer, both guesses and the points.",
+        "properties": {
+          "finished": {
+            "title": "Finished",
+            "type": "boolean"
+          },
+          "learner_points": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Learner Points",
+            "type": "integer"
+          },
+          "model_points": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Model Points",
+            "type": "integer"
+          },
+          "model_prediction": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModelPredictionResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null when the model failed on this round."
+          },
+          "model_unavailable": {
+            "title": "Model Unavailable",
+            "type": "boolean"
+          },
+          "position": {
+            "minimum": 1.0,
+            "title": "Position",
+            "type": "integer"
+          },
+          "race_id": {
+            "minLength": 1,
+            "title": "Race Id",
+            "type": "string"
+          },
+          "reveal": {
+            "$ref": "#/components/schemas/PracticeAnswerResult"
+          },
+          "score": {
+            "$ref": "#/components/schemas/RaceScore"
+          },
+          "timed_out": {
+            "title": "Timed Out",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "race_id",
+          "position",
+          "reveal",
+          "model_unavailable",
+          "timed_out",
+          "learner_points",
+          "model_points",
+          "score",
+          "finished"
+        ],
+        "title": "RaceRoundResult",
+        "type": "object"
+      },
+      "RaceRoundSummary": {
+        "additionalProperties": false,
+        "description": "A row of the race table; answer fields stay null until that round is answered.",
+        "properties": {
+          "answer_country_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer Country Code"
+          },
+          "answered": {
+            "title": "Answered",
+            "type": "boolean"
+          },
+          "asset_id": {
+            "minLength": 1,
+            "title": "Asset Id",
+            "type": "string"
+          },
+          "learner_country_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Learner Country Code"
+          },
+          "learner_points": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Learner Points"
+          },
+          "model_country_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Country Code"
+          },
+          "model_points": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Points"
+          },
+          "model_unavailable": {
+            "default": false,
+            "title": "Model Unavailable",
+            "type": "boolean"
+          },
+          "position": {
+            "minimum": 1.0,
+            "title": "Position",
+            "type": "integer"
+          },
+          "round_id": {
+            "minLength": 1,
+            "title": "Round Id",
+            "type": "string"
+          },
+          "timed_out": {
+            "default": false,
+            "title": "Timed Out",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "position",
+          "round_id",
+          "asset_id",
+          "answered"
+        ],
+        "title": "RaceRoundSummary",
+        "type": "object"
+      },
+      "RaceScore": {
+        "additionalProperties": false,
+        "properties": {
+          "learner": {
+            "minimum": 0.0,
+            "title": "Learner",
+            "type": "integer"
+          },
+          "model": {
+            "minimum": 0.0,
+            "title": "Model",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "learner",
+          "model"
+        ],
+        "title": "RaceScore",
+        "type": "object"
+      },
+      "RaceStartRequest": {
+        "additionalProperties": false,
+        "description": "``time_limit_seconds`` is per round; null means no limit, as in GeoGuessr's settings.",
+        "properties": {
+          "time_limit_seconds": {
+            "anyOf": [
+              {
+                "maximum": 600.0,
+                "minimum": 10.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Limit Seconds"
+          }
+        },
+        "title": "RaceStartRequest",
+        "type": "object"
+      },
+      "RaceStarted": {
+        "additionalProperties": false,
+        "properties": {
+          "model": {
+            "$ref": "#/components/schemas/ModelInfo"
+          },
+          "race_id": {
+            "minLength": 1,
+            "title": "Race Id",
+            "type": "string"
+          },
+          "rounds_total": {
+            "minimum": 1.0,
+            "title": "Rounds Total",
+            "type": "integer"
+          },
+          "time_limit_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Limit Seconds"
+          }
+        },
+        "required": [
+          "race_id",
+          "model",
+          "rounds_total"
+        ],
+        "title": "RaceStarted",
+        "type": "object"
+      },
+      "RaceSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "model": {
+            "$ref": "#/components/schemas/ModelInfo"
+          },
+          "model_missed_rounds": {
+            "minimum": 0.0,
+            "title": "Model Missed Rounds",
+            "type": "integer"
+          },
+          "race_id": {
+            "minLength": 1,
+            "title": "Race Id",
+            "type": "string"
+          },
+          "rounds": {
+            "items": {
+              "$ref": "#/components/schemas/RaceRoundSummary"
+            },
+            "title": "Rounds",
+            "type": "array"
+          },
+          "score": {
+            "$ref": "#/components/schemas/RaceScore"
+          },
+          "time_limit_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Limit Seconds"
+          }
+        },
+        "required": [
+          "race_id",
+          "model",
+          "created_at",
+          "rounds",
+          "score",
+          "model_missed_rounds"
+        ],
+        "title": "RaceSummary",
+        "type": "object"
+      },
       "RightsStatus": {
         "enum": [
           "cleared",
@@ -1338,6 +1725,212 @@
           }
         },
         "summary": "Get Practice Clue"
+      }
+    },
+    "/api/v1/races": {
+      "post": {
+        "description": "Start a race of photo rounds against the enabled model; 409 when it cannot race.",
+        "operationId": "start_race_api_v1_races_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RaceStartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RaceStarted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Race"
+      }
+    },
+    "/api/v1/races/availability": {
+      "get": {
+        "description": "Say whether a race can start; races need a real model and enough photo rounds.",
+        "operationId": "race_availability_api_v1_races_availability_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RaceAvailability"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Race Availability"
+      }
+    },
+    "/api/v1/races/{race_id}": {
+      "get": {
+        "description": "The race table and score; answers appear only for rounds already answered.",
+        "operationId": "get_race_api_v1_races__race_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "race_id",
+            "required": true,
+            "schema": {
+              "title": "Race Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RaceSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Race"
+      }
+    },
+    "/api/v1/races/{race_id}/rounds/{position}": {
+      "get": {
+        "description": "Open a race round (its public payload only) and start its clock.",
+        "operationId": "get_race_round_api_v1_races__race_id__rounds__position__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "race_id",
+            "required": true,
+            "schema": {
+              "title": "Race Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "position",
+            "required": true,
+            "schema": {
+              "title": "Position",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RaceRoundPublic"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Race Round"
+      }
+    },
+    "/api/v1/races/{race_id}/rounds/{position}/answers": {
+      "post": {
+        "description": "Record the learner's guess as a practice attempt, then reveal it with the model's.",
+        "operationId": "answer_race_round_api_v1_races__race_id__rounds__position__answers_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "race_id",
+            "required": true,
+            "schema": {
+              "title": "Race Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "position",
+            "required": true,
+            "schema": {
+              "title": "Position",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PracticeAnswerSubmission"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RaceRoundResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Answer Race Round"
       }
     },
     "/api/v1/study/progress/{round_id}": {

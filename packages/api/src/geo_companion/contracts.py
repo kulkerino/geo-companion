@@ -482,3 +482,93 @@ class LocalPhotoPack(ContractModel):
         if sorted(round_.asset_id for round_ in rounds) != sorted(asset_ids):
             raise ValueError("every photo round needs exactly one listed asset")
         return self
+
+
+# Race mode: the learner and the enabled model guess the same photo rounds. See
+# docs/race-mode-plan.md. A race only groups ordinary practice attempts and the stored
+# post-answer model prediction for each; it adds no new way to see a round's answer early.
+RACE_ROUNDS = 5
+RACE_TIME_LIMIT_MIN_SECONDS = 10
+RACE_TIME_LIMIT_MAX_SECONDS = 600
+
+
+class RaceStartRequest(ContractModel):
+    """``time_limit_seconds`` is per round; null means no limit, as in GeoGuessr's settings."""
+
+    time_limit_seconds: int | None = Field(
+        default=None, ge=RACE_TIME_LIMIT_MIN_SECONDS, le=RACE_TIME_LIMIT_MAX_SECONDS
+    )
+
+
+class RaceScore(ContractModel):
+    learner: int = Field(ge=0)
+    model: int = Field(ge=0)
+
+
+class RaceStarted(ContractModel):
+    race_id: str = Field(min_length=1)
+    model: ModelInfo
+    rounds_total: int = Field(ge=1)
+    time_limit_seconds: int | None = None
+
+
+class RaceRoundPublic(ContractModel):
+    """One race round before the answer: the public round only, never its answer."""
+
+    race_id: str = Field(min_length=1)
+    position: int = Field(ge=1)
+    rounds_total: int = Field(ge=1)
+    round: PracticeRoundPublic
+    started_at: datetime
+    time_limit_seconds: int | None = None
+
+
+class RaceRoundResult(ContractModel):
+    """The reveal of one race round: the answer, both guesses and the points."""
+
+    race_id: str = Field(min_length=1)
+    position: int = Field(ge=1)
+    reveal: PracticeAnswerResult
+    model_prediction: ModelPredictionResult | None = Field(
+        default=None, description="Null when the model failed on this round."
+    )
+    model_unavailable: bool
+    timed_out: bool
+    learner_points: int = Field(ge=0, le=1)
+    model_points: int = Field(ge=0, le=1)
+    score: RaceScore
+    finished: bool
+
+
+class RaceRoundSummary(ContractModel):
+    """A row of the race table; answer fields stay null until that round is answered."""
+
+    position: int = Field(ge=1)
+    round_id: str = Field(min_length=1)
+    asset_id: str = Field(min_length=1)
+    answered: bool
+    answer_country_code: str | None = None
+    learner_country_code: str | None = None
+    model_country_code: str | None = None
+    learner_points: int | None = None
+    model_points: int | None = None
+    timed_out: bool = False
+    model_unavailable: bool = False
+
+
+class RaceSummary(ContractModel):
+    race_id: str = Field(min_length=1)
+    model: ModelInfo
+    time_limit_seconds: int | None = None
+    created_at: datetime
+    finished_at: datetime | None = None
+    rounds: tuple[RaceRoundSummary, ...]
+    score: RaceScore
+    model_missed_rounds: int = Field(ge=0)
+
+
+class RaceAvailability(ContractModel):
+    """Whether a race can start now; ``reason`` says why not, in words for the learner."""
+
+    available: bool
+    reason: str | None = None

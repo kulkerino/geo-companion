@@ -110,7 +110,8 @@ Each PR has its own journal entry and a `PROGRESS.md` update, as usual.
    `feature/race-plan-country-picker`, see `journal/2026-11-02-race-mode-plan-country-picker.md`.
 2. **Race backend.** Contracts, the two tables, three endpoints, scoring, regenerated TS client.
    Tests: model sees only the public round, nothing leaks before the answer, no-model returns
-   409, model failure mid-race, scoring and draws.
+   409, model failure mid-race, scoring and draws. Done on `feature/race-backend`, see
+   `journal/2026-11-02-race-backend.md`.
 3. **Race screen.** Start, round, side-by-side reveal, summary, greyed-out state without a
    model. Integration test with the dummy model through the real API.
 4. **Race with M1c.** Load M1c on the laptop and on the desktop, measure time per photo and

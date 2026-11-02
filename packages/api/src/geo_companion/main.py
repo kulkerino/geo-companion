@@ -16,6 +16,12 @@ from geo_companion.contracts import (
     PracticeAnswerSubmission,
     PracticeClue,
     PracticeRoundPublic,
+    RaceAvailability,
+    RaceRoundPublic,
+    RaceRoundResult,
+    RaceStarted,
+    RaceStartRequest,
+    RaceSummary,
     StudyProgress,
     StudyReview,
 )
@@ -23,6 +29,7 @@ from geo_companion.learning import LearningService, PracticePhotoError
 from geo_companion.models import UnreadablePhotoError, provider_from_environment
 from geo_companion.paths import application_data_dir
 from geo_companion.photo_pack import PhotoPack, photo_pack_from_environment
+from geo_companion.race import RaceOrderError, RaceService, RaceUnavailableError
 from geo_companion.starter_pack import PRACTICE_ROUNDS, STARTER_PACK
 
 
@@ -44,6 +51,7 @@ class PacksResponse(ResponseModel):
 
 app = FastAPI(title="Geo Companion API", version="0.1.0")
 learning_service: LearningService | None = None
+race_service: RaceService | None = None
 photo_pack: PhotoPack | None = None
 
 
@@ -265,3 +273,68 @@ async def get_study_progress(round_id: str) -> StudyProgress:
 async def next_study_review() -> StudyReview:
     """Return the earliest-due local review without inventing one on clean start."""
     return service().next_review()
+
+
+def races() -> RaceService:
+    """Race records share the learner database; the service is built on first use."""
+    global race_service
+    learning = service()
+    if race_service is None or race_service.learning is not learning:
+        race_service = RaceService(learning)
+    return race_service
+
+
+def race_not_found(race_id: str) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=f"Race '{race_id}' or its round was not found.",
+    )
+
+
+@app.get("/api/v1/races/availability", response_model=RaceAvailability)
+async def race_availability() -> RaceAvailability:
+    """Say whether a race can start; races need a real model and enough photo rounds."""
+    reason = races().unavailable_reason()
+    return RaceAvailability(available=reason is None, reason=reason)
+
+
+@app.post("/api/v1/races", response_model=RaceStarted, status_code=status.HTTP_201_CREATED)
+async def start_race(request: RaceStartRequest) -> RaceStarted:
+    """Start a race of photo rounds against the enabled model; 409 when it cannot race."""
+    try:
+        return races().start(request)
+    except RaceUnavailableError as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+
+
+@app.get("/api/v1/races/{race_id}", response_model=RaceSummary)
+async def get_race(race_id: str) -> RaceSummary:
+    """The race table and score; answers appear only for rounds already answered."""
+    try:
+        return races().summary(race_id)
+    except KeyError as error:
+        raise race_not_found(race_id) from error
+
+
+@app.get("/api/v1/races/{race_id}/rounds/{position}", response_model=RaceRoundPublic)
+async def get_race_round(race_id: str, position: int) -> RaceRoundPublic:
+    """Open a race round (its public payload only) and start its clock."""
+    try:
+        return races().round(race_id, position)
+    except KeyError as error:
+        raise race_not_found(race_id) from error
+    except RaceOrderError as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+
+
+@app.post("/api/v1/races/{race_id}/rounds/{position}/answers", response_model=RaceRoundResult)
+async def answer_race_round(
+    race_id: str, position: int, submission: PracticeAnswerSubmission
+) -> RaceRoundResult:
+    """Record the learner's guess as a practice attempt, then reveal it with the model's."""
+    try:
+        return races().answer(race_id, position, submission)
+    except KeyError as error:
+        raise race_not_found(race_id) from error
+    except RaceOrderError as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
