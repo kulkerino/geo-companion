@@ -24,11 +24,15 @@ describe("App", () => {
     render(<App />);
 
     expect(await screen.findByRole("img", { name: "Diagram round-1" })).toBeInTheDocument();
-    const guess = screen.getByLabelText(/Country-code guess/);
+    const guess = screen.getByLabelText(/Country guess/);
     fireEvent.change(guess, { target: { value: "1" } });
+    expect(screen.getByRole("button", { name: "Submit guess" })).toBeDisabled();
+    expect(screen.getByText(/Pick a country from the list/)).toBeInTheDocument();
+    fireEvent.change(guess, { target: { value: "zz" } });
     expect(screen.getByRole("button", { name: "Submit guess" })).toBeDisabled();
     fireEvent.change(guess, { target: { value: "fr" } });
     expect(screen.getByRole("button", { name: "Submit guess" })).toBeEnabled();
+    expect(screen.queryByText(/Pick a country from the list/)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Skip" }));
     expect(await screen.findByText(/Zedland/)).toBeInTheDocument();
@@ -36,6 +40,32 @@ describe("App", () => {
     expect(screen.getByRole("img", { name: "Diagram round-1" })).toBeInTheDocument();
     expect(screen.queryByText(/Zedland/)).not.toBeInTheDocument();
     expect(nextCalls).toBe(1);
+  });
+
+  it("offers a searchable country list and sends the code of a name typed or picked", async () => {
+    const bodies: unknown[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("/practice/rounds/next")) return json(round("round-1"));
+      if (url.endsWith("/answers")) {
+        bodies.push(JSON.parse(String(init?.body)));
+        return json({ round_id: "round-1", attempt_id: "a-1", is_correct: true, submission: { country_code: "SK", skipped: false, uncertain: false }, answer: { country_code: "SK", coordinate: null, answer_origin: "authored", explanation: "Slovakia.", citations: [attribution] }, study_progress: null });
+      }
+      return json({ active: null });
+    }));
+    const { container } = render(<App />);
+    const guess = await screen.findByLabelText(/Country guess/);
+    const options = [...container.querySelectorAll("#country-options option")].map((option) => option.getAttribute("value"));
+    expect(guess).toHaveAttribute("list", "country-options");
+    expect(options).toContain("Slovakia (SK)");
+    expect(options.length).toBeGreaterThan(200);
+
+    fireEvent.change(guess, { target: { value: "Slovakia (SK)" } });
+    expect(screen.getByRole("button", { name: "Submit guess" })).toBeEnabled();
+    fireEvent.change(guess, { target: { value: "slovakia" } });
+    fireEvent.click(screen.getByRole("button", { name: "Submit guess" }));
+    expect(await screen.findByText("Correct.")).toBeInTheDocument();
+    expect(bodies).toEqual([{ country_code: "SK", uncertain: false }]);
   });
 
   it("disables round actions while a submission is in flight so one click records one attempt", async () => {
