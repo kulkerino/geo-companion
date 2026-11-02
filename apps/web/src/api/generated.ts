@@ -83,6 +83,13 @@ export interface PacksResponse {
   packs: Array<PackSummary>;
 }
 
+export interface PhotoGuessResult {
+  model: ModelInfo;
+  candidates: Array<ModelCandidate>;
+  abstained: boolean;
+  origin?: string;
+}
+
 export interface PracticeAnswerResult {
   round_id: string;
   answer: SourceTruthAnswer;
@@ -154,10 +161,12 @@ export class GeoCompanionApiClient {
     const path = template.replace(/{([^}]+)}/g, (_, key: string) =>
       encodeURIComponent(pathParams[key] ?? ""),
     );
+    const binary = body instanceof Blob;
+    const contentType = binary ? body.type || "application/octet-stream" : "application/json";
     const response = await fetch(`${this.baseUrl}${path}`, {
       method,
-      headers: body === undefined ? undefined : { "content-type": "application/json" },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      headers: body === undefined ? undefined : { "content-type": contentType },
+      body: body === undefined ? undefined : binary ? body : JSON.stringify(body),
     });
     if (!response.ok) {
       const errorBody = await response.json().catch(() => null) as { detail?: string } | null;
@@ -195,6 +204,12 @@ export class GeoCompanionApiClient {
   async list_packs_api_v1_packs_get(): Promise<PacksResponse> {
     return this.request<PacksResponse>(
       "GET", "/api/v1/packs", {}, undefined,
+    );
+  }
+
+  async guess_photo_api_v1_photo_guesses_post(body: Blob): Promise<PhotoGuessResult> {
+    return this.request<PhotoGuessResult>(
+      "POST", "/api/v1/photo-guesses", {}, body,
     );
   }
 

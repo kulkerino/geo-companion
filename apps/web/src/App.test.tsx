@@ -59,15 +59,66 @@ describe("App", () => {
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.endsWith("/practice/rounds/next")) return json(++nextCalls === 1 ? round("round-1") : photo);
-      if (url.endsWith("/answers")) return json({ round_id: "round-1", attempt_id: "a-1", is_correct: false, submission: { skipped: true, uncertain: false }, answer: { country_code: "ZZ", coordinate: null, answer_origin: "authored", explanation: "Zedland.", citations: [attribution] }, study_progress: null });
+      if (url.endsWith("/answers")) return json({ round_id: "round-1", attempt_id: "a-1", is_correct: false, submission: { country_code: "CZ", skipped: false, uncertain: false }, answer: { country_code: "SK", coordinate: null, answer_origin: "authored", explanation: "Slovakia.", citations: [attribution] }, study_progress: null });
       return json({ active: null });
     }));
     render(<App />);
     expect(await screen.findByRole("img", { name: "Diagram round-1" })).toHaveAttribute("src", "/starter-assets/round-1.svg");
     fireEvent.click(screen.getByRole("button", { name: "Skip" }));
+    expect(await screen.findByText("Slovakia (SK)")).toBeInTheDocument();
+    expect(screen.getByText(/you guessed Czechia \(CZ\)/)).toBeInTheDocument();
     fireEvent.click(await screen.findByRole("button", { name: "Next round" }));
     expect(await screen.findByRole("img", { name: "Street-level photo" })).toHaveAttribute("src", "/api/v1/assets/ab12.jpg");
     expect(screen.getByLabelText("Photo attribution")).toBeInTheDocument();
+  });
+
+  it("sends the chosen photo to the local API as raw bytes and shows the model's guess", async () => {
+    const model = { model_id: "dummy-placeholder", version: "0.1.0", runtime: "dummy", is_placeholder: true, description: "Placeholder.", required_for_learning: false };
+    const uploads: { type: string | null; body: unknown }[] = [];
+    Object.assign(URL, { createObjectURL: () => "blob:preview", revokeObjectURL: () => {} });
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("/practice/rounds/next")) return json(round("round-1"));
+      if (url.endsWith("/models")) return json({ active: model });
+      if (url.endsWith("/photo-guesses")) {
+        uploads.push({ type: new Headers(init?.headers).get("content-type"), body: init?.body });
+        return json({ model, candidates: [{ country_code: "PT", confidence: 0.41 }, { country_code: "ES", confidence: 0.3 }, { country_code: "BR", confidence: 0.1 }], abstained: false, origin: "model_prediction" });
+      }
+      return json({ detail: "Unexpected request" }, 500);
+    }));
+    render(<App />);
+    await screen.findByRole("img", { name: "Diagram round-1" });
+    fireEvent.click(screen.getByRole("button", { name: "Your photo" }));
+    const ask = screen.getByRole("button", { name: "Ask the model" });
+    expect(ask).toBeDisabled();
+
+    const photo = new File([new Uint8Array([0xff, 0xd8, 0xff])], "holiday.jpg", { type: "image/jpeg" });
+    fireEvent.change(screen.getByLabelText(/Photo \(JPEG/), { target: { files: [photo] } });
+    expect(screen.getByRole("img", { name: "Your chosen photo" })).toHaveAttribute("src", "blob:preview");
+    fireEvent.click(ask);
+
+    const guess = await screen.findByLabelText("Model guess for your photo");
+    expect(guess).toHaveTextContent("Portugal (PT) · 41%");
+    expect(guess).toHaveTextContent("placeholder, not real inference");
+    expect(uploads).toEqual([{ type: "image/jpeg", body: photo }]);
+  });
+
+  it("shows why a photo was refused", async () => {
+    const model = { model_id: "dummy-placeholder", version: "0.1.0", runtime: "dummy", is_placeholder: true, description: "Placeholder.", required_for_learning: false };
+    Object.assign(URL, { createObjectURL: () => "blob:preview", revokeObjectURL: () => {} });
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/practice/rounds/next")) return json(round("round-1"));
+      if (url.endsWith("/models")) return json({ active: model });
+      return json({ detail: "This is one of the practice photos." }, 409);
+    }));
+    render(<App />);
+    await screen.findByRole("img", { name: "Diagram round-1" });
+    fireEvent.click(screen.getByRole("button", { name: "Your photo" }));
+    fireEvent.change(screen.getByLabelText(/Photo \(JPEG/), { target: { files: [new File(["x"], "a.jpg", { type: "image/jpeg" })] } });
+    fireEvent.click(screen.getByRole("button", { name: "Ask the model" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("one of the practice photos");
+    expect(screen.queryByLabelText("Model guess for your photo")).not.toBeInTheDocument();
   });
 
   it("shows an unreachable local service as an error", async () => {

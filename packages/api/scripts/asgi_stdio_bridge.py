@@ -1,6 +1,7 @@
 """Serve the real FastAPI app over stdin/stdout JSON lines for socket-free combined UI tests.
 
-Each input line is ``{"id", "method", "path", "body"}``; each output line is
+Each input line is ``{"id", "method", "path", "body"}``, or ``{"id", "method", "path",
+"body_base64", "content_type"}`` for a binary upload; each output line is
 ``{"id", "status", "headers", "body"}``. Requests go through ``httpx.ASGITransport`` into the
 unmodified ``geo_companion.main.app``, which lazily opens its SQLite database under
 ``GEO_COMPANION_DATA_DIR`` exactly as a uvicorn process would. The variable is required so a test
@@ -10,6 +11,7 @@ can never touch a learner's real application data.
 from __future__ import annotations
 
 import asyncio
+import base64
 import json
 import os
 import sys
@@ -30,11 +32,14 @@ async def serve() -> None:
             if not line.strip():
                 continue
             request = json.loads(line)
+            if "body_base64" in request:
+                content: str | bytes | None = base64.b64decode(request["body_base64"])
+                headers = {"content-type": request["content_type"]}
+            else:
+                content = request.get("body")
+                headers = {"content-type": "application/json"} if content else {}
             response = await client.request(
-                request["method"],
-                request["path"],
-                content=request.get("body"),
-                headers={"content-type": "application/json"} if request.get("body") else None,
+                request["method"], request["path"], content=content, headers=headers
             )
             print(
                 json.dumps(

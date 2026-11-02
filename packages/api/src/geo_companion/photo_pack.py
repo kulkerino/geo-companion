@@ -55,6 +55,7 @@ class PhotoPack:
                 raise PhotoPackError(f"Photo {path} is missing or does not match the pack.")
             self._paths[asset.asset_id] = path
         self.pack = pack
+        self.asset_hashes = frozenset(asset.sha256 for asset in local.assets)
         self.rounds: tuple[PracticeRound, ...] = pack.practice_rounds
 
     def asset_path(self, asset_id: str) -> Path | None:

@@ -14,6 +14,7 @@ from typing import Protocol
 
 import numpy as np
 import onnxruntime  # type: ignore[import-untyped]
+from PIL import Image
 
 from geo_companion.contracts import (
     CountryModelManifest,
@@ -21,7 +22,8 @@ from geo_companion.contracts import (
     ModelInfo,
     PracticeRoundPublic,
 )
-from geo_companion.image_input import eval_array, load_rgb
+from geo_companion.image_input import decode_upload, eval_array, load_rgb
+from geo_companion.models import UnreadablePhotoError
 from geo_companion.paths import is_inside_repository
 
 TOP_K = 3
@@ -94,7 +96,17 @@ class OnnxCountryProvider:
 
     def predict_image(self, path: Path) -> tuple[ModelCandidate, ...]:
         """Rank countries for one image file; an empty tuple means the model abstains."""
-        image = eval_array(load_rgb(path), self.manifest.input_size)
+        return self._rank(load_rgb(path))
+
+    def predict_photo(self, photo: bytes) -> tuple[ModelCandidate, ...]:
+        try:
+            image = decode_upload(photo)
+        except ValueError as error:
+            raise UnreadablePhotoError(str(error)) from error
+        return self._rank(image)
+
+    def _rank(self, rgb: Image.Image) -> tuple[ModelCandidate, ...]:
+        image = eval_array(rgb, self.manifest.input_size)
         (logits,) = self._session.run(["logits"], {"image": image[np.newaxis]})
         scaled = np.asarray(logits, dtype=np.float64)[0] / self.manifest.temperature
         probabilities = np.exp(scaled - scaled.max())

@@ -83,6 +83,16 @@ GEO_COMPANION_PHOTO_PACK=$P GEO_COMPANION_MODEL=onnx:<manifest path> \
   uv run --group model uvicorn geo_companion.main:app --host 127.0.0.1 --port 8000
 ```
 
+### Your own photo
+
+The **Your photo** tab sends a JPEG, PNG or WebP photo of your own (up to 15 MB and
+40 megapixels) to the local API (`POST /api/v1/photo-guesses`, the raw image as the request
+body). The enabled model answers with its top three countries or abstains. The photo is kept
+in memory for that one request and is never written to disk or the database, and the guess
+is not graded or stored. The dummy model gives a labelled placeholder answer; a real
+guess needs `GEO_COMPANION_MODEL=onnx:<manifest path>`. A photo from the loaded photo pack
+is refused byte for byte, so the model cannot be asked about a round before you answer it.
+
 No request leaves the laptop: the bundled diagrams are original teaching assets,
 not Street View or other captured imagery. They are rendered deterministically by
 `packages/api/scripts/generate_starter_diagrams.py` (use `--check` to detect drift).

@@ -1,7 +1,8 @@
 """Local prediction providers behind one boundary; the learning loop never depends on them.
 
 A provider sees only the public round (asset ID and attribution), never the authored answer,
-so it cannot leak or copy the answer key. The dummy provider stands in for a future local
+so it cannot leak or copy the answer key. It can also judge a learner's own uploaded photo,
+which has no answer at all. The dummy provider stands in for a future local
 model: it exercises the same API, storage, and UI paths without any inference or download.
 """
 
@@ -28,11 +29,22 @@ DUMMY_LABELS = (
 ABSTAIN_BELOW = 0.2
 
 
+class UnreadablePhotoError(ValueError):
+    """An uploaded photo cannot be decoded, or is too large to decode safely."""
+
+
 class PredictionProvider(Protocol):
     info: ModelInfo
 
     def predict(self, round_: PracticeRoundPublic) -> tuple[ModelCandidate, ...]:
         """Return up to three ranked candidates, or an empty tuple to abstain."""
+        ...
+
+    def predict_photo(self, photo: bytes) -> tuple[ModelCandidate, ...]:
+        """Rank countries for an uploaded photo's encoded bytes, or abstain.
+
+        Raises ``UnreadablePhotoError`` when the bytes are not a usable image.
+        """
         ...
 
 
@@ -52,7 +64,15 @@ class DummyProvider:
 
     def predict(self, round_: PracticeRoundPublic) -> tuple[ModelCandidate, ...]:
         seed_text = f"{self.info.model_id}:{self.info.version}:{round_.round_id}:{round_.asset_id}"
-        seed = int.from_bytes(hashlib.sha256(seed_text.encode()).digest()[:8], "big")
+        return self._seeded(seed_text.encode())
+
+    def predict_photo(self, photo: bytes) -> tuple[ModelCandidate, ...]:
+        # Seeded by the file's hash: the same photo gets the same placeholder answer, and the
+        # pixels are never looked at.
+        return self._seeded(f"{self.info.model_id}:{self.info.version}:upload:".encode() + photo)
+
+    def _seeded(self, seed_bytes: bytes) -> tuple[ModelCandidate, ...]:
+        seed = int.from_bytes(hashlib.sha256(seed_bytes).digest()[:8], "big")
         generator = random.Random(seed)
         weights = {label: generator.random() ** 10 for label in DUMMY_LABELS}
         total = sum(weights.values())

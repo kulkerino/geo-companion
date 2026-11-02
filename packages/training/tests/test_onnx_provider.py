@@ -106,6 +106,23 @@ def test_provider_predicts_post_answer_through_an_image_source(tmp_path: Path) -
     assert len(result.candidates) == 3
 
 
+def test_provider_guesses_an_uploaded_photo_like_the_same_file_on_disk(tmp_path: Path) -> None:
+    from geo_companion.models import UnreadablePhotoError
+
+    manifest, _ = export_tiny_model(tmp_path)
+    photo = write_photo(tmp_path / "photo.png")
+    provider = OnnxCountryProvider(manifest)
+    service = LearningService(tmp_path / "runtime.sqlite3", provider=provider)
+
+    result = service.photo_guess(photo.read_bytes())
+
+    assert result.candidates == provider.predict_image(photo)
+    assert len(result.candidates) == 3
+    assert result.model.is_placeholder is False
+    with pytest.raises(UnreadablePhotoError):
+        provider.predict_photo(b"\x89PNG\r\n\x1a\n but truncated")
+
+
 def test_provider_refuses_a_tampered_artifact(tmp_path: Path) -> None:
     manifest, _ = export_tiny_model(tmp_path)
     with (tmp_path / "model.onnx").open("ab") as handle:
