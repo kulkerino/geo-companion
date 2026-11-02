@@ -2,7 +2,6 @@ import { useEffect, useState, type ChangeEvent } from "react";
 
 import {
   GeoCompanionApiClient,
-  type Attribution,
   type ModelCandidate,
   type ModelEvaluation,
   type ModelInfo,
@@ -13,10 +12,12 @@ import {
   type StudyProgress,
 } from "./api/generated";
 import "./app.css";
+import { AttributionDetails } from "./AttributionDetails";
 import { COUNTRY_OPTIONS, country, parseCountryGuess } from "./countries";
+import { RaceMode } from "./Race";
 
 const client = new GeoCompanionApiClient();
-type View = "practice" | "study" | "photo" | "accuracy";
+type View = "practice" | "study" | "photo" | "accuracy" | "race";
 const PHOTO_TYPES = "image/jpeg,image/png,image/webp";
 
 function message(error: unknown) {
@@ -31,31 +32,6 @@ function days(count: number) {
 function assetUrl(round: PracticeRoundPublic) {
   const id = encodeURIComponent(round.asset_id);
   return round.asset_kind === "photo" ? `/api/v1/assets/${id}` : `/starter-assets/${id}`;
-}
-
-function AttributionDetails({ attribution, label }: { attribution: Attribution; label: string }) {
-  return (
-    <dl className="source" aria-label={label}>
-      <dt>Source</dt>
-      <dd>
-        <a href={attribution.source_url} target="_blank" rel="noreferrer noopener">{attribution.source_title}</a>
-      </dd>
-      <dt>Attribution</dt>
-      <dd>{attribution.attribution_text}</dd>
-      <dt>Creator</dt>
-      <dd>{attribution.creator}</dd>
-      <dt>License</dt>
-      <dd>
-        <a href={attribution.license_url} target="_blank" rel="noreferrer noopener">{attribution.license_name}</a>
-      </dd>
-      <dt>Rights status</dt>
-      <dd>{attribution.rights_status}</dd>
-      <dt>Geographic scope</dt>
-      <dd>{attribution.geographic_scope}</dd>
-      <dt>Accessed / reviewed</dt>
-      <dd>{attribution.accessed_on} / {attribution.reviewed_on}</dd>
-    </dl>
-  );
 }
 
 function Schedule({ progress }: { progress: StudyProgress }) {
@@ -303,10 +279,12 @@ function App() {
         <button type="button" aria-pressed={view === "study"} onClick={openStudy}>Study review</button>
         <button type="button" aria-pressed={view === "photo"} onClick={() => setView("photo")}>Your photo</button>
         <button type="button" aria-pressed={view === "accuracy"} onClick={() => setView("accuracy")}>Model accuracy</button>
+        <button type="button" aria-pressed={view === "race"} onClick={() => setView("race")}>Race the model</button>
       </nav>
-      {error && view !== "photo" && view !== "accuracy" && <p role="alert">{error}</p>}
+      {error && (view === "practice" || view === "study") && <p role="alert">{error}</p>}
       {view === "photo" && <PhotoGuess model={model} />}
       {view === "accuracy" && <ModelAccuracy model={model} />}
+      {view === "race" && <RaceMode />}
       {view === "practice" && <section aria-labelledby="practice-title">
         <h2 id="practice-title">Open Practice</h2>
         {!round && !error && <p>Loading a practice round…</p>}

@@ -113,7 +113,8 @@ Each PR has its own journal entry and a `PROGRESS.md` update, as usual.
    409, model failure mid-race, scoring and draws. Done on `feature/race-backend`, see
    `journal/2026-11-02-race-backend.md`.
 3. **Race screen.** Start, round, side-by-side reveal, summary, greyed-out state without a
-   model. Integration test with the dummy model through the real API.
+   model. Integration test with the dummy model through the real API. Done on `feature/race-screen`, see
+   `journal/2026-11-02-race-screen.md`.
 4. **Race with M1c.** Load M1c on the laptop and on the desktop, measure time per photo and
    reliability on each, pick the faster reliable one, play a few real races,
    record the results in a journal entry (a nice extra number for the accuracy report: "humans

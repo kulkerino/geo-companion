@@ -6,7 +6,7 @@ work that changes it; detailed evidence for each session goes in [`journal/`](jo
 **Last updated:** 2026-11-02
 **Branch:** `main`. PRs #1–#4 are merged, and new work goes on short branches with one PR each into `main`, which kulo merges.
 **GitHub:** [kulkerino/geo-companion](https://github.com/kulkerino/geo-companion) (public, because the professor needs access), remote `origin`; branches `main` and the separate school branch `rocnikovy-projekt` (no shared history, never merged)
-**Next step:** race mode step 3 (race screen), see [`docs/race-mode-plan.md`](docs/race-mode-plan.md). In parallel, kulo finishes M1c on the RTX 3060 PC (the last 2 of 16 epochs, then eval and export) (data is already on the RTX 3060 PC; about 12–14 hours in total, resumable), following [`docs/runbook-m1c-rtx-3060.md`](docs/runbook-m1c-rtx-3060.md); then load the M1c model with the photo pack, and the independent M1 review.
+**Next step:** race mode step 4 (race with M1c once it is exported), see [`docs/race-mode-plan.md`](docs/race-mode-plan.md). In parallel, kulo finishes M1c on the RTX 3060 PC (the last 2 of 16 epochs, then eval and export) (data is already on the RTX 3060 PC; about 12–14 hours in total, resumable), following [`docs/runbook-m1c-rtx-3060.md`](docs/runbook-m1c-rtx-3060.md); then load the M1c model with the photo pack, and the independent M1 review.
 
 ## Task status
 
@@ -29,6 +29,7 @@ work that changes it; detailed evidence for each session goes in [`journal/`](jo
 | Model accuracy page: held-out results of the enabled model | done, self-reviewed | see journal | [2026-11-02](journal/2026-11-02-model-accuracy-page.md) |
 | Race mode plan; searchable country list for guesses (race step 1) | done, self-reviewed | see journal | [2026-11-02](journal/2026-11-02-race-mode-plan-country-picker.md) |
 | Race mode backend: race API, storage and scoring (race step 2) | done, self-reviewed | see journal | [2026-11-02](journal/2026-11-02-race-backend.md) |
+| Race mode screen: start, countdown, side-by-side reveal, summary (race step 3) | done, self-reviewed | see journal | [2026-11-02](journal/2026-11-02-race-screen.md) |
 | 4. Pack lifecycle and source tooling | planned | — | — |
 | 5. Curriculum pipeline | planned | — | — |
 | 6. Optional local model | planned | — | — |
@@ -41,6 +42,9 @@ The full plan is in
 
 ## What works today
 
+- **Race the model**: five photo rounds against the enabled model, with an optional time
+  limit per round, a side-by-side reveal after each answer and a summary. It needs a real
+  model and a photo pack; with the placeholder it explains why it is off.
 - Guesses are picked from a searchable list of every country (type a name or a code, e.g.
   France or FR); the answer is still sent as the two-letter code.
 - Open Practice on ten original CC0 diagrams. You get an optional clue, then guess, guess
