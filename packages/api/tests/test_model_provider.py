@@ -176,10 +176,12 @@ def test_model_api_is_post_answer_only(tmp_path: Path, monkeypatch: pytest.Monke
     )
     paths = main.app.openapi()["paths"]
     model_paths = [path for path in paths if "model" in path]
+    # Benchmarks return totals only on the fixed race photos; see test_race_history.py.
     assert model_paths == [
         "/api/v1/models",
         "/api/v1/models/evaluation",
         "/api/v1/practice/attempts/{attempt_id}/model-prediction",
+        "/api/v1/models/benchmarks",
     ]
 
     status = api(main.app, "GET", "/api/v1/models")

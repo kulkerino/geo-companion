@@ -572,3 +572,69 @@ class RaceAvailability(ContractModel):
 
     available: bool
     reason: str | None = None
+
+
+# Race history and model progress (race mode step 5). Only totals and finished races are
+# returned, never a round's answer, so the history adds no way to see an answer early.
+class RaceTally(ContractModel):
+    """Finished races only: points and wins, the learner against the model."""
+
+    races: int = Field(ge=0)
+    rounds: int = Field(ge=0)
+    learner_points: int = Field(ge=0)
+    model_points: int = Field(ge=0)
+    learner_wins: int = Field(ge=0)
+    model_wins: int = Field(ge=0)
+    draws: int = Field(ge=0)
+
+
+class RaceModelRecord(ContractModel):
+    """The learner's record against one model version."""
+
+    model: ModelInfo
+    tally: RaceTally
+
+
+class RaceHistoryEntry(ContractModel):
+    race_id: str = Field(min_length=1)
+    model: ModelInfo
+    time_limit_seconds: int | None = None
+    created_at: datetime
+    finished_at: datetime
+    score: RaceScore
+    rounds_total: int = Field(ge=1)
+
+
+class RaceHistory(ContractModel):
+    """Finished races, newest first, with totals overall and per model version."""
+
+    races: tuple[RaceHistoryEntry, ...]
+    overall: RaceTally
+    by_model: tuple[RaceModelRecord, ...]
+
+
+class ModelBenchmarkRun(ContractModel):
+    """One model version guessing every photo of a fixed photo set, before any answer.
+
+    ``photo_set_id`` names the exact set of photo rounds, so runs are compared only on the
+    same photos. Only the totals are stored and returned, never a per-photo answer.
+    """
+
+    model: ModelInfo
+    photo_set_id: str = Field(min_length=1)
+    rounds: int = Field(ge=1)
+    correct: int = Field(ge=0)
+    abstained: int = Field(ge=0)
+    failed: int = Field(ge=0)
+    accuracy: float = Field(ge=0, le=1)
+    created_at: datetime
+
+
+class ModelBenchmarks(ContractModel):
+    """All benchmark runs, oldest first, and whether the enabled model can run one now."""
+
+    photo_set_id: str | None = None
+    photo_rounds: int = Field(ge=0)
+    runs: tuple[ModelBenchmarkRun, ...]
+    can_run: bool
+    reason: str | None = None
