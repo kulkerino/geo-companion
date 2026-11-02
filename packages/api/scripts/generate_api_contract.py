@@ -81,10 +81,16 @@ def response_type(operation: Mapping[str, Any]) -> str:
 def request_body(operation: Mapping[str, Any]) -> tuple[str, bool] | None:
     request_body = operation.get("requestBody", {})
     content = request_body.get("content", {})
+    required = bool(request_body.get("required", False))
     schema = content.get("application/json", {}).get("schema")
-    if not isinstance(schema, Mapping):
-        return None
-    return ts_type(schema), bool(request_body.get("required", False))
+    if isinstance(schema, Mapping):
+        return ts_type(schema), required
+    # A raw binary body (a photo upload) is sent as a Blob with the Blob's own content type.
+    if content and all(
+        media.get("schema", {}).get("format") == "binary" for media in content.values()
+    ):
+        return "Blob", required
+    return None
 
 
 def path_parameters(operation: Mapping[str, Any]) -> list[Mapping[str, Any]]:
@@ -151,10 +157,12 @@ export class GeoCompanionApiClient {{
     const path = template.replace(/{{([^}}]+)}}/g, (_, key: string) =>
       encodeURIComponent(pathParams[key] ?? ""),
     );
+    const binary = body instanceof Blob;
+    const contentType = binary ? body.type || "application/octet-stream" : "application/json";
     const response = await fetch(`${{this.baseUrl}}${{path}}`, {{
       method,
-      headers: body === undefined ? undefined : {{ "content-type": "application/json" }},
-      body: body === undefined ? undefined : JSON.stringify(body),
+      headers: body === undefined ? undefined : {{ "content-type": contentType }},
+      body: body === undefined ? undefined : binary ? body : JSON.stringify(body),
     }});
     if (!response.ok) {{
       const errorBody = await response.json().catch(() => null) as {{ detail?: string }} | null;
@@ -188,7 +196,7 @@ def main() -> int:
     if args.check:
         stale = []
         for path, contents in files.items():
-            if not path.exists() or path.read_text() != contents:
+            if not path.exists() or path.read_text(encoding="utf-8") != contents:
                 stale.append(path)
         if stale:
             print("Generated API artifacts are stale:")
@@ -197,7 +205,7 @@ def main() -> int:
         return 0
     for path, contents in files.items():
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(contents)
+        path.write_text(contents, encoding="utf-8", newline="\n")
     return 0
 
 

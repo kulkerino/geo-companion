@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import sqlite3
 import uuid
 from collections.abc import Iterator
@@ -13,6 +14,7 @@ from geo_companion.contracts import (
     Feedback,
     ModelPredictionResult,
     ModelStatus,
+    PhotoGuessResult,
     PracticeAnswerResult,
     PracticeAnswerSubmission,
     PracticeClue,
@@ -32,14 +34,29 @@ QUALITY_INCORRECT = 2
 QUALITY_SKIPPED = 1
 
 
+class PracticePhotoError(ValueError):
+    """An upload is byte-for-byte one of the practice rounds' photos."""
+
+
 class LearningService:
-    """Own one pseudonymous learner's local history and immutable starter content."""
+    """Own one pseudonymous learner's local history and immutable practice content."""
 
     learner_id = "local-learner"
 
-    def __init__(self, database_path: Path, provider: PredictionProvider | None = None) -> None:
+    def __init__(
+        self,
+        database_path: Path,
+        provider: PredictionProvider | None = None,
+        rounds: tuple[PracticeRound, ...] = PRACTICE_ROUNDS,
+        practice_photo_hashes: frozenset[str] = frozenset(),
+    ) -> None:
+        round_ids = [round_.round_id for round_ in rounds]
+        if not rounds or len(set(round_ids)) != len(round_ids):
+            raise ValueError("practice rounds must be non-empty with unique round ids")
         self.database_path = database_path
         self.provider = provider
+        self.rounds = rounds
+        self.practice_photo_hashes = practice_photo_hashes
         self.database_path.parent.mkdir(parents=True, exist_ok=True)
         self._initialize()
 
@@ -91,9 +108,8 @@ class LearningService:
                     "ADD COLUMN reported_issue INTEGER NOT NULL DEFAULT 0"
                 )
 
-    @staticmethod
-    def _round(round_id: str) -> PracticeRound:
-        round_ = next((item for item in PRACTICE_ROUNDS if item.round_id == round_id), None)
+    def _round(self, round_id: str) -> PracticeRound:
+        round_ = next((item for item in self.rounds if item.round_id == round_id), None)
         if round_ is None:
             raise KeyError(round_id)
         return round_
@@ -106,12 +122,12 @@ class LearningService:
                 "ORDER BY rowid DESC LIMIT 1",
                 (self.learner_id,),
             ).fetchone()
-        round_ids = [item.round_id for item in PRACTICE_ROUNDS]
+        round_ids = [item.round_id for item in self.rounds]
         if row is None or row["round_id"] not in round_ids:
             index = 0
         else:
-            index = (round_ids.index(row["round_id"]) + 1) % len(PRACTICE_ROUNDS)
-        return PracticeRoundPublic.from_round(PRACTICE_ROUNDS[index])
+            index = (round_ids.index(row["round_id"]) + 1) % len(self.rounds)
+        return PracticeRoundPublic.from_round(self.rounds[index])
 
     def round_public(self, round_id: str) -> PracticeRoundPublic:
         return PracticeRoundPublic.from_round(self._round(round_id))
@@ -238,6 +254,23 @@ class LearningService:
             )
         return result
 
+    def photo_guess(self, photo: bytes) -> PhotoGuessResult:
+        """Ask the model about the learner's own photo. The photo and the result are kept in
+        memory only: an upload has no authored answer, so there is no attempt to record."""
+        if self.provider is None:
+            raise LookupError("No local model is enabled.")
+        # Uploading a practice round's own photo would ask the model before answering, so
+        # those bytes are refused here; "Compare with model" covers them after the answer.
+        if f"sha256:{hashlib.sha256(photo).hexdigest()}" in self.practice_photo_hashes:
+            raise PracticePhotoError(
+                "This is one of the practice photos. Answer its round first, then use "
+                "Compare with model."
+            )
+        candidates = self.provider.predict_photo(photo)
+        return PhotoGuessResult(
+            model=self.provider.info, candidates=candidates, abstained=not candidates
+        )
+
     def attempt_history(self, round_id: str) -> list[dict[str, object]]:
         with self._connect() as connection:
             rows = connection.execute(
@@ -301,7 +334,7 @@ class LearningService:
         return progress
 
     def _schedule_rows(self) -> list[StudyProgress]:
-        known = {item.round_id for item in PRACTICE_ROUNDS}
+        known = {item.round_id for item in self.rounds}
         with self._connect() as connection:
             rows = connection.execute(
                 "SELECT round_id, repetitions, interval_days, ease_factor, last_reviewed_on "

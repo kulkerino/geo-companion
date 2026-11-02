@@ -1,4 +1,7 @@
-"""SQLite schema foundation; content activation and learner flows arrive in later tasks."""
+"""SQLite migration foundation for the planned content-pack lifecycle (Task 4).
+
+The running app does not call this yet: ``LearningService`` creates its own learner tables.
+"""
 
 from __future__ import annotations
 

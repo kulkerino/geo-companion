@@ -1,12 +1,16 @@
 """FastAPI entrypoint for the loopback-only local service."""
 
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, Request, status
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict
 
 from geo_companion.contracts import (
+    PHOTO_UPLOAD_MAX_BYTES,
+    PHOTO_UPLOAD_MEDIA_TYPES,
     Feedback,
     ModelPredictionResult,
     ModelStatus,
+    PhotoGuessResult,
     PracticeAnswerResult,
     PracticeAnswerSubmission,
     PracticeClue,
@@ -14,13 +18,15 @@ from geo_companion.contracts import (
     StudyProgress,
     StudyReview,
 )
-from geo_companion.learning import LearningService
-from geo_companion.models import provider_from_environment
+from geo_companion.learning import LearningService, PracticePhotoError
+from geo_companion.models import UnreadablePhotoError, provider_from_environment
 from geo_companion.paths import application_data_dir
-from geo_companion.starter_pack import STARTER_PACK
+from geo_companion.photo_pack import PhotoPack, photo_pack_from_environment
+from geo_companion.starter_pack import PRACTICE_ROUNDS, STARTER_PACK
 
 
-# These small response models intentionally return no content until the Task 4 lifecycle exists.
+# Pack responses list the bundled starter pack and the optional local photo pack until the
+# Task 4 install lifecycle exists.
 class ResponseModel(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -37,14 +43,20 @@ class PacksResponse(ResponseModel):
 
 app = FastAPI(title="Geo Companion API", version="0.1.0")
 learning_service: LearningService | None = None
+photo_pack: PhotoPack | None = None
 
 
 def service() -> LearningService:
     """Open the local learner database lazily so schema/OpenAPI imports stay pure."""
-    global learning_service
+    global learning_service, photo_pack
     if learning_service is None:
+        photo_pack = photo_pack_from_environment()
+        rounds = PRACTICE_ROUNDS if photo_pack is None else PRACTICE_ROUNDS + photo_pack.rounds
         learning_service = LearningService(
-            application_data_dir() / "runtime.sqlite3", provider=provider_from_environment()
+            application_data_dir() / "runtime.sqlite3",
+            provider=provider_from_environment(images=photo_pack),
+            rounds=rounds,
+            practice_photo_hashes=frozenset() if photo_pack is None else photo_pack.asset_hashes,
         )
     return learning_service
 
@@ -64,21 +76,34 @@ async def health() -> dict[str, str]:
 
 @app.get("/api/v1/packs", response_model=PacksResponse)
 async def list_packs() -> PacksResponse:
-    """Expose the immutable bundled starter pack without a lifecycle/install flow."""
+    """Expose the starter pack and any verified local photo pack, without an install flow."""
+    service()
+    packs = (STARTER_PACK,) if photo_pack is None else (STARTER_PACK, photo_pack.pack)
     return PacksResponse(
-        packs=(
-            PackSummary(
-                pack_id=STARTER_PACK.pack_id,
-                version=STARTER_PACK.version,
-                content_hash=STARTER_PACK.content_hash,
-            ),
+        packs=tuple(
+            PackSummary(pack_id=pack.pack_id, version=pack.version, content_hash=pack.content_hash)
+            for pack in packs
         )
     )
 
 
+@app.get(
+    "/api/v1/assets/{asset_id}",
+    response_class=FileResponse,
+    responses={200: {"content": {"image/jpeg": {}}}},
+)
+async def get_photo_asset(asset_id: str) -> FileResponse:
+    """Serve one verified photo of the local photo pack; its name reveals nothing."""
+    service()
+    path = None if photo_pack is None else photo_pack.asset_path(asset_id)
+    if path is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Asset not found.")
+    return FileResponse(path, media_type="image/jpeg")
+
+
 @app.get("/api/v1/practice/rounds/next", response_model=PracticeRoundPublic)
 async def next_practice_round() -> PracticeRoundPublic:
-    """Serve an original diagram only; answers never leave this route before submission."""
+    """Serve the next diagram or photo round; answers never leave this route before submission."""
     return service().next_round()
 
 
@@ -144,6 +169,74 @@ async def get_model_prediction(attempt_id: str) -> ModelPredictionResult:
             else str(error)
         )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail) from error
+
+
+# The declared content type must match the upload's leading bytes.
+def has_photo_signature(media_type: str, head: bytes) -> bool:
+    if media_type == "image/jpeg":
+        return head.startswith(b"\xff\xd8\xff")
+    if media_type == "image/png":
+        return head.startswith(b"\x89PNG\r\n\x1a\n")
+    return head[:4] == b"RIFF" and head[8:12] == b"WEBP"
+
+
+async def read_photo_upload(request: Request) -> bytes:
+    media_type = request.headers.get("content-type", "").split(";")[0].strip().lower()
+    if media_type not in PHOTO_UPLOAD_MEDIA_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Upload a JPEG, PNG or WebP photo.",
+        )
+    too_large = HTTPException(
+        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+        detail=f"The photo is larger than {PHOTO_UPLOAD_MAX_BYTES // (1024 * 1024)} MB.",
+    )
+    declared = request.headers.get("content-length", "")
+    if declared.isdigit() and int(declared) > PHOTO_UPLOAD_MAX_BYTES:
+        raise too_large
+    data = bytearray()
+    async for chunk in request.stream():
+        data.extend(chunk)
+        if len(data) > PHOTO_UPLOAD_MAX_BYTES:
+            raise too_large
+    if not has_photo_signature(media_type, bytes(data[:12])):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="The file is empty or is not the image type it claims to be.",
+        )
+    return bytes(data)
+
+
+@app.post(
+    "/api/v1/photo-guesses",
+    response_model=PhotoGuessResult,
+    openapi_extra={
+        "requestBody": {
+            "required": True,
+            "content": {
+                media_type: {"schema": {"type": "string", "format": "binary"}}
+                for media_type in PHOTO_UPLOAD_MEDIA_TYPES
+            },
+        }
+    },
+)
+async def guess_photo(request: Request) -> PhotoGuessResult:
+    """Ask the local model about the learner's own photo: a top-3 guess or an abstention.
+
+    The photo is the raw request body. It is held in memory for this request only and is
+    never written to disk or the database.
+    """
+    photo = await read_photo_upload(request)
+    try:
+        return service().photo_guess(photo)
+    except LookupError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+    except PracticePhotoError as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+    except UnreadablePhotoError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(error)
+        ) from error
 
 
 @app.get("/api/v1/study/progress/{round_id}", response_model=StudyProgress)

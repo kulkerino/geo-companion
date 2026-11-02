@@ -17,7 +17,8 @@ def test_production_web_bundle_contains_no_starter_answer_or_synthetic_coordinat
     )
     assert result.returncode == 0, result.stdout + result.stderr
     bundle = "".join(
-        asset.read_text() for asset in (repository_root / "apps/web/dist/assets").glob("*.js")
+        asset.read_text(encoding="utf-8")
+        for asset in (repository_root / "apps/web/dist/assets").glob("*.js")
     )
     forbidden = ["48.15", "17.11", "Authored teaching target", 'country_code:"']
     for evidence in STARTER_DIAGRAMS:

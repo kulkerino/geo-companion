@@ -1,6 +1,14 @@
 {
   "components": {
     "schemas": {
+      "AssetKind": {
+        "enum": [
+          "diagram",
+          "photo"
+        ],
+        "title": "AssetKind",
+        "type": "string"
+      },
       "Attribution": {
         "additionalProperties": false,
         "description": "Rights and provenance required for every published educational claim or asset.",
@@ -402,6 +410,40 @@
         "title": "PacksResponse",
         "type": "object"
       },
+      "PhotoGuessResult": {
+        "additionalProperties": false,
+        "description": "The model's opinion on a learner's own photo. Nothing is stored and nothing is graded:\nthe photo has no authored answer, so this is never source truth.",
+        "properties": {
+          "abstained": {
+            "title": "Abstained",
+            "type": "boolean"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/ModelCandidate"
+            },
+            "maxItems": 5,
+            "title": "Candidates",
+            "type": "array"
+          },
+          "model": {
+            "$ref": "#/components/schemas/ModelInfo"
+          },
+          "origin": {
+            "const": "model_prediction",
+            "default": "model_prediction",
+            "title": "Origin",
+            "type": "string"
+          }
+        },
+        "required": [
+          "model",
+          "candidates",
+          "abstained"
+        ],
+        "title": "PhotoGuessResult",
+        "type": "object"
+      },
       "PracticeAnswerResult": {
         "additionalProperties": false,
         "description": "Post-submission reveal with deterministic scoring and a local attempt identity.",
@@ -531,6 +573,9 @@
             "title": "Asset Id",
             "type": "string"
           },
+          "asset_kind": {
+            "$ref": "#/components/schemas/AssetKind"
+          },
           "round_id": {
             "title": "Round Id",
             "type": "string"
@@ -539,6 +584,7 @@
         "required": [
           "round_id",
           "asset_id",
+          "asset_kind",
           "asset_attribution",
           "asset_description"
         ],
@@ -711,6 +757,42 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/assets/{asset_id}": {
+      "get": {
+        "description": "Serve one verified photo of the local photo pack; its name reveals nothing.",
+        "operationId": "get_photo_asset_api_v1_assets__asset_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "asset_id",
+            "required": true,
+            "schema": {
+              "title": "Asset Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/jpeg": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Photo Asset"
+      }
+    },
     "/api/v1/feedback": {
       "post": {
         "description": "Persist local feedback; reports remain separate from verified source truth.",
@@ -787,7 +869,7 @@
     },
     "/api/v1/packs": {
       "get": {
-        "description": "Expose the immutable bundled starter pack without a lifecycle/install flow.",
+        "description": "Expose the starter pack and any verified local photo pack, without an install flow.",
         "operationId": "list_packs_api_v1_packs_get",
         "responses": {
           "200": {
@@ -802,6 +884,48 @@
           }
         },
         "summary": "List Packs"
+      }
+    },
+    "/api/v1/photo-guesses": {
+      "post": {
+        "description": "Ask the local model about the learner's own photo: a top-3 guess or an abstention.\n\nThe photo is the raw request body. It is held in memory for this request only and is\nnever written to disk or the database.",
+        "operationId": "guess_photo_api_v1_photo_guesses_post",
+        "requestBody": {
+          "content": {
+            "image/jpeg": {
+              "schema": {
+                "format": "binary",
+                "type": "string"
+              }
+            },
+            "image/png": {
+              "schema": {
+                "format": "binary",
+                "type": "string"
+              }
+            },
+            "image/webp": {
+              "schema": {
+                "format": "binary",
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhotoGuessResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Guess Photo"
       }
     },
     "/api/v1/practice/attempts/{attempt_id}/model-prediction": {
@@ -846,7 +970,7 @@
     },
     "/api/v1/practice/rounds/next": {
       "get": {
-        "description": "Serve an original diagram only; answers never leave this route before submission.",
+        "description": "Serve the next diagram or photo round; answers never leave this route before submission.",
         "operationId": "next_practice_round_api_v1_practice_rounds_next_get",
         "responses": {
           "200": {

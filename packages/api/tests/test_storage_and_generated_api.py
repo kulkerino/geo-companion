@@ -51,7 +51,10 @@ def test_sqlite_foundation_rejects_paths_outside_application_data(
     escape_target = tmp_path / "vault"
     escape_target.mkdir()
     escape_link = application_data / "escape"
-    escape_link.symlink_to(escape_target, target_is_directory=True)
+    try:
+        escape_link.symlink_to(escape_target, target_is_directory=True)
+    except OSError as error:  # Windows without Developer Mode or admin rights
+        pytest.skip(f"cannot create a symlink here: {error}")
     with pytest.raises(ValueError, match="application-data"):
         storage.initialize_database(escape_link / "runtime.sqlite3")
 
