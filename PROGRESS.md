@@ -26,6 +26,7 @@ work that changes it; detailed evidence for each session goes in [`journal/`](jo
 | Model M1c: real training on the RTX 3060 PC | in progress: 5 of 16 epochs done (val top-1 0.602), resumable from `last.pt` | `bf0c931`, see journal | [2026-10-26](journal/2026-10-26-model-m1c-rtx-3060.md) |
 | Photo upload: the model's top-3 guess or abstention on your own photo | done, self-reviewed; draft PR into `feature/model-m1` | see journal | [2026-10-26](journal/2026-10-26-photo-upload.md) |
 | OSV-5M photo display OK; full country names after the answer | done, self-reviewed | see journal | [2026-11-01](journal/2026-11-01-photo-display-ok-country-names.md) |
+| Model accuracy page: held-out results of the enabled model | done, self-reviewed | see journal | [2026-11-02](journal/2026-11-02-model-accuracy-page.md) |
 | 4. Pack lifecycle and source tooling | planned | — | — |
 | 5. Curriculum pipeline | planned | — | — |
 | 6. Optional local model | planned | — | — |
@@ -53,6 +54,12 @@ The full plan is in
 - **Your photo**: upload a JPEG, PNG or WebP photo of your own and get the enabled model's
   top-3 country guess or an abstention. The photo is held in memory for that request only
   and nothing is stored; photos from the loaded photo pack are refused.
+- **Model accuracy**: a tab that shows the enabled model's held-out results, recorded when it
+  was trained: top-1 and top-5 accuracy against "always guess the commonest country" and
+  random guessing, how often it answers and how often it is right then, calibration error,
+  and top-1 accuracy by country. The summary comes from the hash-checked manifest; the
+  per-country rows come from the run's `report.json` and are shown only when it agrees with
+  the manifest.
 - Everything runs locally: FastAPI on `127.0.0.1:8000`, Vite on `127.0.0.1:5173`, and SQLite
   in the per-user application-data directory (never inside this folder).
 

@@ -1,6 +1,43 @@
 {
   "components": {
     "schemas": {
+      "AbstentionSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "coverage": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Coverage",
+            "type": "number"
+          },
+          "selective_top1": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Accuracy on the images the model answered; null if none.",
+            "title": "Selective Top1"
+          },
+          "threshold": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Threshold",
+            "type": "number"
+          }
+        },
+        "required": [
+          "threshold",
+          "coverage"
+        ],
+        "title": "AbstentionSummary",
+        "type": "object"
+      },
       "AssetKind": {
         "enum": [
           "diagram",
@@ -176,6 +213,63 @@
         "title": "Coordinate",
         "type": "object"
       },
+      "CountryAccuracy": {
+        "additionalProperties": false,
+        "properties": {
+          "country_code": {
+            "pattern": "^[A-Z]{2}$",
+            "title": "Country Code",
+            "type": "string"
+          },
+          "images": {
+            "exclusiveMinimum": 0.0,
+            "title": "Images",
+            "type": "integer"
+          },
+          "top1": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Top1",
+            "type": "number"
+          }
+        },
+        "required": [
+          "country_code",
+          "images",
+          "top1"
+        ],
+        "title": "CountryAccuracy",
+        "type": "object"
+      },
+      "EvaluationBaselines": {
+        "additionalProperties": false,
+        "properties": {
+          "majority_class": {
+            "pattern": "^[A-Z]{2}$",
+            "title": "Majority Class",
+            "type": "string"
+          },
+          "majority_top1": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Majority Top1",
+            "type": "number"
+          },
+          "uniform_top1": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Uniform Top1",
+            "type": "number"
+          }
+        },
+        "required": [
+          "majority_class",
+          "majority_top1",
+          "uniform_top1"
+        ],
+        "title": "EvaluationBaselines",
+        "type": "object"
+      },
       "Feedback": {
         "additionalProperties": false,
         "properties": {
@@ -254,6 +348,116 @@
           "confidence"
         ],
         "title": "ModelCandidate",
+        "type": "object"
+      },
+      "ModelEvaluation": {
+        "additionalProperties": false,
+        "description": "Held-out results recorded when the enabled model was trained; read-only, offline.\n\nThe summary comes from the hash-checked manifest. Per-country rows come from the run's\n``report.json`` and are shown only when that report agrees with the manifest.",
+        "properties": {
+          "abstention": {
+            "$ref": "#/components/schemas/AbstentionSummary"
+          },
+          "baselines": {
+            "$ref": "#/components/schemas/EvaluationBaselines"
+          },
+          "classes": {
+            "minimum": 2.0,
+            "title": "Classes",
+            "type": "integer"
+          },
+          "dataset_attribution": {
+            "minLength": 1,
+            "title": "Dataset Attribution",
+            "type": "string"
+          },
+          "dataset_license": {
+            "minLength": 1,
+            "title": "Dataset License",
+            "type": "string"
+          },
+          "ece_calibrated": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Ece Calibrated",
+            "type": "number"
+          },
+          "ece_raw": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Ece Raw",
+            "type": "number"
+          },
+          "images": {
+            "exclusiveMinimum": 0.0,
+            "title": "Images",
+            "type": "integer"
+          },
+          "model": {
+            "$ref": "#/components/schemas/ModelInfo"
+          },
+          "out_of_label_set": {
+            "minimum": 0.0,
+            "title": "Out Of Label Set",
+            "type": "integer"
+          },
+          "per_country": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/CountryAccuracy"
+            },
+            "title": "Per Country",
+            "type": "array"
+          },
+          "split": {
+            "enum": [
+              "test",
+              "val",
+              "unknown"
+            ],
+            "title": "Split",
+            "type": "string"
+          },
+          "temperature": {
+            "exclusiveMinimum": 0.0,
+            "title": "Temperature",
+            "type": "number"
+          },
+          "top1": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Top1",
+            "type": "number"
+          },
+          "top5": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Top5",
+            "type": "number"
+          },
+          "trained_on": {
+            "minLength": 1,
+            "title": "Trained On",
+            "type": "string"
+          }
+        },
+        "required": [
+          "model",
+          "split",
+          "images",
+          "classes",
+          "out_of_label_set",
+          "top1",
+          "top5",
+          "ece_raw",
+          "ece_calibrated",
+          "temperature",
+          "abstention",
+          "baselines",
+          "trained_on",
+          "dataset_license",
+          "dataset_attribution"
+        ],
+        "title": "ModelEvaluation",
         "type": "object"
       },
       "ModelInfo": {
@@ -865,6 +1069,25 @@
           }
         },
         "summary": "Model Status"
+      }
+    },
+    "/api/v1/models/evaluation": {
+      "get": {
+        "description": "Held-out accuracy recorded when the enabled model was trained; 404 when there is none.",
+        "operationId": "model_evaluation_api_v1_models_evaluation_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelEvaluation"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Model Evaluation"
       }
     },
     "/api/v1/packs": {

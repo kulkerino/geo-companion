@@ -12,6 +12,7 @@ from pathlib import Path
 
 from geo_companion.contracts import (
     Feedback,
+    ModelEvaluation,
     ModelPredictionResult,
     ModelStatus,
     PhotoGuessResult,
@@ -205,6 +206,14 @@ class LearningService:
 
     def model_status(self) -> ModelStatus:
         return ModelStatus(active=None if self.provider is None else self.provider.info)
+
+    def model_evaluation(self) -> ModelEvaluation:
+        if self.provider is None:
+            raise LookupError("No local model is enabled.")
+        evaluation = self.provider.evaluation()
+        if evaluation is None:
+            raise LookupError("The enabled model has no recorded evaluation.")
+        return evaluation
 
     def model_prediction(self, attempt_id: str) -> ModelPredictionResult:
         """Return the model's opinion for an answered attempt, computing and storing it once.

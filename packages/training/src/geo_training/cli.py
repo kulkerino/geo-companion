@@ -232,7 +232,8 @@ def _run(args: argparse.Namespace) -> int:
     parity = export_onnx(model, config.image_size, artifact)
     if parity > 1e-3:
         raise SystemExit(f"ONNX output differs from PyTorch by {parity:.2e}; not exporting.")
-    summary = {**reports.get("test", reports["val"]), "calibration": args.calibration}
+    split = "test" if "test" in reports else "val"
+    summary = {**reports[split], "split": split, "calibration": args.calibration}
     write_manifest(
         model_id=args.model_id,
         version=args.version,

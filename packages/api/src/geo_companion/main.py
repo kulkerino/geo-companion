@@ -8,6 +8,7 @@ from geo_companion.contracts import (
     PHOTO_UPLOAD_MAX_BYTES,
     PHOTO_UPLOAD_MEDIA_TYPES,
     Feedback,
+    ModelEvaluation,
     ModelPredictionResult,
     ModelStatus,
     PhotoGuessResult,
@@ -152,6 +153,15 @@ async def submit_feedback(feedback: Feedback) -> None:
 async def model_status() -> ModelStatus:
     """Report the optional local model; ``active`` is null when none is enabled."""
     return service().model_status()
+
+
+@app.get("/api/v1/models/evaluation", response_model=ModelEvaluation)
+async def model_evaluation() -> ModelEvaluation:
+    """Held-out accuracy recorded when the enabled model was trained; 404 when there is none."""
+    try:
+        return service().model_evaluation()
+    except LookupError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
 
 
 @app.get(

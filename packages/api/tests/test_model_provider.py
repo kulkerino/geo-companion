@@ -178,6 +178,7 @@ def test_model_api_is_post_answer_only(tmp_path: Path, monkeypatch: pytest.Monke
     model_paths = [path for path in paths if "model" in path]
     assert model_paths == [
         "/api/v1/models",
+        "/api/v1/models/evaluation",
         "/api/v1/practice/attempts/{attempt_id}/model-prediction",
     ]
 
@@ -194,6 +195,9 @@ def test_model_api_is_post_answer_only(tmp_path: Path, monkeypatch: pytest.Monke
     assert prediction.status_code == 200
     assert prediction.json()["model"]["is_placeholder"] is True
     assert prediction.json()["origin"] == "model_prediction"
+    evaluation = api(main.app, "GET", "/api/v1/models/evaluation")
+    assert evaluation.status_code == 404
+    assert evaluation.json()["detail"] == "The enabled model has no recorded evaluation."
 
 
 def test_model_api_reports_no_model(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -211,3 +215,6 @@ def test_model_api_reports_no_model(tmp_path: Path, monkeypatch: pytest.MonkeyPa
     assert api(main.app, "GET", "/api/v1/models").json() == {"active": None}
     assert prediction.status_code == 404
     assert prediction.json()["detail"] == "No local model is enabled."
+    evaluation = api(main.app, "GET", "/api/v1/models/evaluation")
+    assert evaluation.status_code == 404
+    assert evaluation.json()["detail"] == "No local model is enabled."

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 import pytest
 import torch
@@ -21,7 +22,9 @@ SIZE = 32
 FIRST_ROUND = "starter-place-01"
 
 
-def export_tiny_model(tmp_path: Path, abstain_below: float = 0.0) -> tuple[Path, CountryNet]:
+def export_tiny_model(
+    tmp_path: Path, abstain_below: float = 0.0, evaluation: dict[str, Any] | None = None
+) -> tuple[Path, CountryNet]:
     torch.manual_seed(0)
     model = CountryNet(len(CLASSES), width=8).eval()
     artifact = tmp_path / "model.onnx"
@@ -37,7 +40,7 @@ def export_tiny_model(tmp_path: Path, abstain_below: float = 0.0) -> tuple[Path,
         temperature=1.5,
         abstain_below=abstain_below,
         dataset=record,
-        evaluation={"top1": 0.0},
+        evaluation=evaluation if evaluation is not None else {"top1": 0.0},
         path=manifest,
     )
     return manifest, model
@@ -159,3 +162,91 @@ def test_environment_selects_the_onnx_provider(
     monkeypatch.setenv("GEO_COMPANION_MODEL", "onnx:")
     with pytest.raises(ValueError, match="onnx:<manifest path>"):
         provider_from_environment()
+
+
+# The shape ``geo_training.evaluate.report`` writes, minus ``per_country``.
+SUMMARY: dict[str, Any] = {
+    "images": 400, "out_of_label_set": 12, "classes": 4, "top1": 0.61, "top5": 0.97,
+    "ece_raw": 0.08, "ece_calibrated": 0.02, "temperature": 1.5,
+    "abstention": {"threshold": 0.55, "coverage": 0.4, "selective_top1": 0.83},
+    "baselines": {"majority_class": "BR", "majority_top1": 0.3, "uniform_top1": 0.25},
+}  # fmt: skip
+PER_COUNTRY = {"BR": {"images": 120, "top1": 0.7}, "JP": {"images": 80, "top1": 0.55}}
+
+
+def write_report(folder: Path, test: dict[str, Any]) -> None:
+    (folder / "report.json").write_text(json.dumps({"val": {**SUMMARY, "top1": 0.6}, "test": test}))
+
+
+def test_evaluation_joins_the_manifest_summary_with_matching_per_country_rows(
+    tmp_path: Path,
+) -> None:
+    evaluation = {**SUMMARY, "split": "test", "calibration": "sqrt"}
+    manifest, _ = export_tiny_model(tmp_path, evaluation=evaluation)
+    write_report(tmp_path, {**SUMMARY, "per_country": PER_COUNTRY})
+
+    result = OnnxCountryProvider(manifest).evaluation()
+
+    assert result is not None
+    assert result.split == "test" and result.top1 == 0.61 and result.images == 400
+    assert result.abstention.coverage == 0.4
+    assert [(c.country_code, c.images, c.top1) for c in result.per_country] == [
+        ("BR", 120, 0.7),
+        ("JP", 80, 0.55),
+    ]
+    assert result.model.model_id == "country-net-test"
+    assert result.dataset_license == "CC BY-SA 4.0"
+
+
+def test_a_report_that_disagrees_with_the_manifest_adds_no_rows(tmp_path: Path) -> None:
+    manifest, _ = export_tiny_model(tmp_path, evaluation={**SUMMARY, "split": "test"})
+    write_report(tmp_path, {**SUMMARY, "top1": 0.99, "per_country": PER_COUNTRY})
+
+    result = OnnxCountryProvider(manifest).evaluation()
+
+    assert result is not None and result.top1 == 0.61 and result.per_country == ()
+
+
+def test_older_manifests_without_a_split_are_matched_against_the_report(tmp_path: Path) -> None:
+    manifest, _ = export_tiny_model(tmp_path, evaluation=SUMMARY)
+    write_report(tmp_path, {**SUMMARY, "per_country": PER_COUNTRY})
+
+    result = OnnxCountryProvider(manifest).evaluation()
+
+    assert result is not None and result.split == "test" and len(result.per_country) == 2
+
+
+def test_evaluation_api_serves_results_and_404s_without_them(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import asyncio
+
+    import geo_companion.main as main
+    import httpx
+
+    def get(path: str) -> httpx.Response:
+        async def send() -> httpx.Response:
+            transport = httpx.ASGITransport(app=main.app)
+            async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+                return await client.get(path)
+
+        return asyncio.run(send())
+
+    full = tmp_path / "full"
+    full.mkdir()
+    manifest, _ = export_tiny_model(full, evaluation={**SUMMARY, "split": "test"})
+    service = LearningService(tmp_path / "a.sqlite3", provider=OnnxCountryProvider(manifest))
+    monkeypatch.setattr(main, "learning_service", service)
+    response = get("/api/v1/models/evaluation")
+    assert response.status_code == 200
+    assert response.json()["top1"] == 0.61 and response.json()["per_country"] == []
+
+    # A smoke manifest with an incomplete summary: the model runs, but has no evaluation.
+    smoke = tmp_path / "smoke"
+    smoke.mkdir()
+    manifest, _ = export_tiny_model(smoke)
+    service = LearningService(tmp_path / "b.sqlite3", provider=OnnxCountryProvider(manifest))
+    monkeypatch.setattr(main, "learning_service", service)
+    response = get("/api/v1/models/evaluation")
+    assert response.status_code == 404
+    assert response.json()["detail"] == "The enabled model has no recorded evaluation."
