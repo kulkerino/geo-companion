@@ -134,3 +134,26 @@ def test_restrict_classes_grades_only_allowed_countries() -> None:
         logits, torch.tensor([0, 1, 2]), ["CN", "BR", "KE"], frozenset({"BR", "KE"})
     )
     assert dropped == 1 and labels_only.tolist() == [0, 1]
+
+
+def test_initialise_from_run_keeps_known_countries_and_starts_new_ones_fresh(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    import json
+
+    from geo_training.model import CountryNet
+    from geo_training.train import initialise_from_run
+
+    torch.manual_seed(1)
+    old = CountryNet(3, width=8)
+    torch.save(old.state_dict(), tmp_path / "final.pt")
+    (tmp_path / "config.json").write_text(json.dumps({"width": 8, "classes": ["BR", "CZ", "JP"]}))
+
+    new = CountryNet(3, width=8)
+    fresh_row = new.head.weight[2].detach().clone()
+    assert initialise_from_run(new, ["CZ", "JP", "KE"], tmp_path) == 2
+    assert torch.equal(new.head.weight[0], old.head.weight[1])  # CZ moved from row 1 to row 0
+    assert torch.equal(new.head.weight[1], old.head.weight[2])  # JP
+    assert torch.equal(new.head.weight[2], fresh_row)  # KE is new
+    assert torch.equal(new.stem[0].weight, old.stem[0].weight)
+
+    with pytest.raises(SystemExit, match="width"):
+        initialise_from_run(CountryNet(3, width=16), ["CZ"], tmp_path)

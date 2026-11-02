@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import math
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -27,6 +28,9 @@ class MetadataError(ValueError):
 def read_samples(csv_path: Path, image_dir: Path) -> Iterator[Sample]:
     """Yield samples whose image file exists; rows without a country code are skipped.
 
+    Coordinates may be empty (screenshot sets only know the country); those rows must carry a
+    ``sequence`` so the train/val split can group them.
+
     OSV-5M stores images as ``<image_dir>/<id>.jpg``. Only images that are actually present
     are yielded, so a partial download (a few shards) gives a consistent subset.
     """
@@ -46,8 +50,8 @@ def read_samples(csv_path: Path, image_dir: Path) -> Iterator[Sample]:
             yield Sample(
                 image_id=row["id"],
                 image_path=image_path,
-                latitude=float(row["latitude"]),
-                longitude=float(row["longitude"]),
+                latitude=float(row["latitude"]) if row["latitude"] else math.nan,
+                longitude=float(row["longitude"]) if row["longitude"] else math.nan,
                 country=country,
                 sequence=(row.get("sequence") or None),
             )
