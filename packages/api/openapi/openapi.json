@@ -328,6 +328,114 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "ModelBenchmarkRun": {
+        "additionalProperties": false,
+        "description": "One model version guessing every photo of a fixed photo set, before any answer.\n\n``photo_set_id`` names the exact set of photo rounds, so runs are compared only on the\nsame photos. Only the totals are stored and returned, never a per-photo answer.",
+        "properties": {
+          "abstained": {
+            "minimum": 0.0,
+            "title": "Abstained",
+            "type": "integer"
+          },
+          "accuracy": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Accuracy",
+            "type": "number"
+          },
+          "correct": {
+            "minimum": 0.0,
+            "title": "Correct",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "failed": {
+            "minimum": 0.0,
+            "title": "Failed",
+            "type": "integer"
+          },
+          "model": {
+            "$ref": "#/components/schemas/ModelInfo"
+          },
+          "photo_set_id": {
+            "minLength": 1,
+            "title": "Photo Set Id",
+            "type": "string"
+          },
+          "rounds": {
+            "minimum": 1.0,
+            "title": "Rounds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "model",
+          "photo_set_id",
+          "rounds",
+          "correct",
+          "abstained",
+          "failed",
+          "accuracy",
+          "created_at"
+        ],
+        "title": "ModelBenchmarkRun",
+        "type": "object"
+      },
+      "ModelBenchmarks": {
+        "additionalProperties": false,
+        "description": "All benchmark runs, oldest first, and whether the enabled model can run one now.",
+        "properties": {
+          "can_run": {
+            "title": "Can Run",
+            "type": "boolean"
+          },
+          "photo_rounds": {
+            "minimum": 0.0,
+            "title": "Photo Rounds",
+            "type": "integer"
+          },
+          "photo_set_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Set Id"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/ModelBenchmarkRun"
+            },
+            "title": "Runs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "photo_rounds",
+          "runs",
+          "can_run"
+        ],
+        "title": "ModelBenchmarks",
+        "type": "object"
+      },
       "ModelCandidate": {
         "additionalProperties": false,
         "properties": {
@@ -821,6 +929,106 @@
         "title": "RaceAvailability",
         "type": "object"
       },
+      "RaceHistory": {
+        "additionalProperties": false,
+        "description": "Finished races, newest first, with totals overall and per model version.",
+        "properties": {
+          "by_model": {
+            "items": {
+              "$ref": "#/components/schemas/RaceModelRecord"
+            },
+            "title": "By Model",
+            "type": "array"
+          },
+          "overall": {
+            "$ref": "#/components/schemas/RaceTally"
+          },
+          "races": {
+            "items": {
+              "$ref": "#/components/schemas/RaceHistoryEntry"
+            },
+            "title": "Races",
+            "type": "array"
+          }
+        },
+        "required": [
+          "races",
+          "overall",
+          "by_model"
+        ],
+        "title": "RaceHistory",
+        "type": "object"
+      },
+      "RaceHistoryEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "finished_at": {
+            "format": "date-time",
+            "title": "Finished At",
+            "type": "string"
+          },
+          "model": {
+            "$ref": "#/components/schemas/ModelInfo"
+          },
+          "race_id": {
+            "minLength": 1,
+            "title": "Race Id",
+            "type": "string"
+          },
+          "rounds_total": {
+            "minimum": 1.0,
+            "title": "Rounds Total",
+            "type": "integer"
+          },
+          "score": {
+            "$ref": "#/components/schemas/RaceScore"
+          },
+          "time_limit_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Limit Seconds"
+          }
+        },
+        "required": [
+          "race_id",
+          "model",
+          "created_at",
+          "finished_at",
+          "score",
+          "rounds_total"
+        ],
+        "title": "RaceHistoryEntry",
+        "type": "object"
+      },
+      "RaceModelRecord": {
+        "additionalProperties": false,
+        "description": "The learner's record against one model version.",
+        "properties": {
+          "model": {
+            "$ref": "#/components/schemas/ModelInfo"
+          },
+          "tally": {
+            "$ref": "#/components/schemas/RaceTally"
+          }
+        },
+        "required": [
+          "model",
+          "tally"
+        ],
+        "title": "RaceModelRecord",
+        "type": "object"
+      },
       "RacePlayer": {
         "description": "Who races the model: the learner, or a class guessing together on a projector.",
         "enum": [
@@ -1203,6 +1411,58 @@
         "title": "RaceSummary",
         "type": "object"
       },
+      "RaceTally": {
+        "additionalProperties": false,
+        "description": "Finished races only: points and wins, the learner against the model.",
+        "properties": {
+          "draws": {
+            "minimum": 0.0,
+            "title": "Draws",
+            "type": "integer"
+          },
+          "learner_points": {
+            "minimum": 0.0,
+            "title": "Learner Points",
+            "type": "integer"
+          },
+          "learner_wins": {
+            "minimum": 0.0,
+            "title": "Learner Wins",
+            "type": "integer"
+          },
+          "model_points": {
+            "minimum": 0.0,
+            "title": "Model Points",
+            "type": "integer"
+          },
+          "model_wins": {
+            "minimum": 0.0,
+            "title": "Model Wins",
+            "type": "integer"
+          },
+          "races": {
+            "minimum": 0.0,
+            "title": "Races",
+            "type": "integer"
+          },
+          "rounds": {
+            "minimum": 0.0,
+            "title": "Rounds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "races",
+          "rounds",
+          "learner_points",
+          "model_points",
+          "learner_wins",
+          "model_wins",
+          "draws"
+        ],
+        "title": "RaceTally",
+        "type": "object"
+      },
       "RightsStatus": {
         "enum": [
           "cleared",
@@ -1477,6 +1737,42 @@
           }
         },
         "summary": "Model Status"
+      }
+    },
+    "/api/v1/models/benchmarks": {
+      "get": {
+        "description": "Each model version's score on the fixed set of race photos, for the progress graph.",
+        "operationId": "model_benchmarks_api_v1_models_benchmarks_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelBenchmarks"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Model Benchmarks"
+      },
+      "post": {
+        "description": "Run the enabled model over the fixed photo set once; 409 when it cannot race.",
+        "operationId": "run_model_benchmark_api_v1_models_benchmarks_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelBenchmarkRun"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Run Model Benchmark"
       }
     },
     "/api/v1/models/evaluation": {
@@ -1804,6 +2100,25 @@
           }
         },
         "summary": "Race Availability"
+      }
+    },
+    "/api/v1/races/history": {
+      "get": {
+        "description": "Finished races and your record against each model version; never a round's answer.",
+        "operationId": "get_race_history_api_v1_races_history_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RaceHistory"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Race History"
       }
     },
     "/api/v1/races/{race_id}": {

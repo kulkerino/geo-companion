@@ -8,6 +8,8 @@ from geo_companion.contracts import (
     PHOTO_UPLOAD_MAX_BYTES,
     PHOTO_UPLOAD_MEDIA_TYPES,
     Feedback,
+    ModelBenchmarkRun,
+    ModelBenchmarks,
     ModelEvaluation,
     ModelPredictionResult,
     ModelStatus,
@@ -17,6 +19,7 @@ from geo_companion.contracts import (
     PracticeClue,
     PracticeRoundPublic,
     RaceAvailability,
+    RaceHistory,
     RaceRoundPublic,
     RaceRoundResult,
     RaceStarted,
@@ -30,6 +33,7 @@ from geo_companion.models import UnreadablePhotoError, provider_from_environment
 from geo_companion.paths import application_data_dir
 from geo_companion.photo_pack import PhotoPack, photo_pack_from_environment
 from geo_companion.race import RaceOrderError, RaceService, RaceUnavailableError
+from geo_companion.race_history import RaceHistoryService
 from geo_companion.starter_pack import PRACTICE_ROUNDS, STARTER_PACK
 
 
@@ -52,6 +56,7 @@ class PacksResponse(ResponseModel):
 app = FastAPI(title="Geo Companion API", version="0.1.0")
 learning_service: LearningService | None = None
 race_service: RaceService | None = None
+race_history_service: RaceHistoryService | None = None
 photo_pack: PhotoPack | None = None
 
 
@@ -296,6 +301,37 @@ async def race_availability() -> RaceAvailability:
     """Say whether a race can start; races need a real model and enough photo rounds."""
     reason = races().unavailable_reason()
     return RaceAvailability(available=reason is None, reason=reason)
+
+
+def race_history() -> RaceHistoryService:
+    """History and benchmarks read the race tables; rebuilt when the race service is."""
+    global race_history_service
+    current = races()
+    if race_history_service is None or race_history_service.races is not current:
+        race_history_service = RaceHistoryService(current)
+    return race_history_service
+
+
+# Declared before /api/v1/races/{race_id} so "history" is not taken for a race id.
+@app.get("/api/v1/races/history", response_model=RaceHistory)
+async def get_race_history() -> RaceHistory:
+    """Finished races and your record against each model version; never a round's answer."""
+    return race_history().history()
+
+
+@app.get("/api/v1/models/benchmarks", response_model=ModelBenchmarks)
+async def model_benchmarks() -> ModelBenchmarks:
+    """Each model version's score on the fixed set of race photos, for the progress graph."""
+    return race_history().benchmarks()
+
+
+@app.post("/api/v1/models/benchmarks", response_model=ModelBenchmarkRun)
+async def run_model_benchmark() -> ModelBenchmarkRun:
+    """Run the enabled model over the fixed photo set once; 409 when it cannot race."""
+    try:
+        return race_history().run_benchmark()
+    except RaceUnavailableError as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
 
 
 @app.post("/api/v1/races", response_model=RaceStarted, status_code=status.HTTP_201_CREATED)

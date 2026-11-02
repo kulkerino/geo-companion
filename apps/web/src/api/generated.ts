@@ -64,6 +64,25 @@ export interface HTTPValidationError {
   detail?: Array<ValidationError>;
 }
 
+export interface ModelBenchmarkRun {
+  model: ModelInfo;
+  photo_set_id: string;
+  rounds: number;
+  correct: number;
+  abstained: number;
+  failed: number;
+  accuracy: number;
+  created_at: string;
+}
+
+export interface ModelBenchmarks {
+  photo_set_id?: string | null;
+  photo_rounds: number;
+  runs: Array<ModelBenchmarkRun>;
+  can_run: boolean;
+  reason?: string | null;
+}
+
 export interface ModelCandidate {
   country_code: string;
   confidence: number;
@@ -162,6 +181,27 @@ export interface RaceAvailability {
   reason?: string | null;
 }
 
+export interface RaceHistory {
+  races: Array<RaceHistoryEntry>;
+  overall: RaceTally;
+  by_model: Array<RaceModelRecord>;
+}
+
+export interface RaceHistoryEntry {
+  race_id: string;
+  model: ModelInfo;
+  time_limit_seconds?: number | null;
+  created_at: string;
+  finished_at: string;
+  score: RaceScore;
+  rounds_total: number;
+}
+
+export interface RaceModelRecord {
+  model: ModelInfo;
+  tally: RaceTally;
+}
+
 export type RacePlayer = "you" | "class";
 
 export interface RaceRoundPublic {
@@ -228,6 +268,16 @@ export interface RaceSummary {
   rounds: Array<RaceRoundSummary>;
   score: RaceScore;
   model_missed_rounds: number;
+}
+
+export interface RaceTally {
+  races: number;
+  rounds: number;
+  learner_points: number;
+  model_points: number;
+  learner_wins: number;
+  model_wins: number;
+  draws: number;
 }
 
 export type RightsStatus = "cleared" | "reference-only" | "quarantined";
@@ -311,6 +361,18 @@ export class GeoCompanionApiClient {
     );
   }
 
+  async model_benchmarks_api_v1_models_benchmarks_get(): Promise<ModelBenchmarks> {
+    return this.request<ModelBenchmarks>(
+      "GET", "/api/v1/models/benchmarks", {}, undefined,
+    );
+  }
+
+  async run_model_benchmark_api_v1_models_benchmarks_post(): Promise<ModelBenchmarkRun> {
+    return this.request<ModelBenchmarkRun>(
+      "POST", "/api/v1/models/benchmarks", {}, undefined,
+    );
+  }
+
   async model_evaluation_api_v1_models_evaluation_get(): Promise<ModelEvaluation> {
     return this.request<ModelEvaluation>(
       "GET", "/api/v1/models/evaluation", {}, undefined,
@@ -368,6 +430,12 @@ export class GeoCompanionApiClient {
   async race_availability_api_v1_races_availability_get(): Promise<RaceAvailability> {
     return this.request<RaceAvailability>(
       "GET", "/api/v1/races/availability", {}, undefined,
+    );
+  }
+
+  async get_race_history_api_v1_races_history_get(): Promise<RaceHistory> {
+    return this.request<RaceHistory>(
+      "GET", "/api/v1/races/history", {}, undefined,
     );
   }
 

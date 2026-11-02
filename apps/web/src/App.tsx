@@ -15,9 +15,10 @@ import "./app.css";
 import { AttributionDetails } from "./AttributionDetails";
 import { COUNTRY_OPTIONS, country, parseCountryGuess } from "./countries";
 import { RaceMode } from "./Race";
+import { RaceHistory } from "./RaceHistory";
 
 const client = new GeoCompanionApiClient();
-type View = "practice" | "study" | "photo" | "accuracy" | "race";
+type View = "practice" | "study" | "photo" | "accuracy" | "race" | "history";
 const PHOTO_TYPES = "image/jpeg,image/png,image/webp";
 
 function message(error: unknown) {
@@ -280,11 +281,13 @@ function App() {
         <button type="button" aria-pressed={view === "photo"} onClick={() => setView("photo")}>Your photo</button>
         <button type="button" aria-pressed={view === "accuracy"} onClick={() => setView("accuracy")}>Model accuracy</button>
         <button type="button" aria-pressed={view === "race"} onClick={() => setView("race")}>Race the model</button>
+        <button type="button" aria-pressed={view === "history"} onClick={() => setView("history")}>Race history</button>
       </nav>
       {error && (view === "practice" || view === "study") && <p role="alert">{error}</p>}
       {view === "photo" && <PhotoGuess model={model} />}
       {view === "accuracy" && <ModelAccuracy model={model} />}
       {view === "race" && <RaceMode />}
+      {view === "history" && <RaceHistory />}
       {view === "practice" && <section aria-labelledby="practice-title">
         <h2 id="practice-title">Open Practice</h2>
         {!round && !error && <p>Loading a practice round…</p>}
