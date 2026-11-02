@@ -6,7 +6,7 @@ work that changes it; detailed evidence for each session goes in [`journal/`](jo
 **Last updated:** 2026-11-02
 **Branch:** `main`. PRs #1–#4 are merged, and new work goes on short branches with one PR each into `main`, which kulo merges.
 **GitHub:** [kulkerino/geo-companion](https://github.com/kulkerino/geo-companion) (public, because the professor needs access), remote `origin`; branches `main` and the separate school branch `rocnikovy-projekt` (no shared history, never merged)
-**Next step:** race mode step 4 (race with M1c once it is exported, then score it in Race history → Model progress), see [`docs/race-mode-plan.md`](docs/race-mode-plan.md). In parallel, kulo finishes M1c on the RTX 3060 PC (the last 2 of 16 epochs, then eval and export) (data is already on the RTX 3060 PC; about 12–14 hours in total, resumable), following [`docs/runbook-m1c-rtx-3060.md`](docs/runbook-m1c-rtx-3060.md); then load the M1c model with the photo pack, and the independent M1 review.
+**Next step:** race mode step 4 (race with M1c, now exported; then score it in Race history → Model progress), see [`docs/race-mode-plan.md`](docs/race-mode-plan.md). M1c is trained and exported on the RTX 3060 PC (test top-1 0.645); next, load it in the app with the photo pack, and the independent M1 review.
 
 ## Task status
 
@@ -23,14 +23,16 @@ work that changes it; detailed evidence for each session goes in [`journal/`](jo
 | Model M1c prep: calibration fix and RTX 3060 runbook | done, self-reviewed | see journal | [2026-10-19](journal/2026-10-19-model-m1c-prep.md) |
 | Repository cleanup (no behaviour change) | done, merged into `main` via PR #2 and PR #3 | see journal | [2026-10-26](journal/2026-10-26-repo-cleanup.md) |
 | Photo rounds from held-out OSV-5M test photos | done, self-reviewed | see journal | [2026-10-26](journal/2026-10-26-photo-rounds.md) |
-| Model M1c: real training on the RTX 3060 PC | in progress: 14 of 16 epochs done (val top-1 0.761, reported in the project chat 2026-11-02; the journal records up to epoch 5), resumable from `last.pt` | `bf0c931`, see journal | [2026-10-26](journal/2026-10-26-model-m1c-rtx-3060.md) |
+| Model M1c: real training on the RTX 3060 PC | done: test top-1 0.645, top-5 0.830 (171 countries); exported to ONNX on the PC | `b6968a7`, see journal | [2026-10-26](journal/2026-10-26-model-m1c-rtx-3060.md) |
 | Photo upload: the model's top-3 guess or abstention on your own photo | done, self-reviewed; merged into `main` via PR #4 and PR #3 | see journal | [2026-10-26](journal/2026-10-26-photo-upload.md) |
 | OSV-5M photo display OK; full country names after the answer | done, self-reviewed | see journal | [2026-11-01](journal/2026-11-01-photo-display-ok-country-names.md) |
 | Model accuracy page: held-out results of the enabled model | done, self-reviewed | see journal | [2026-11-02](journal/2026-11-02-model-accuracy-page.md) |
 | Race mode plan; searchable country list for guesses (race step 1) | done, self-reviewed | see journal | [2026-11-02](journal/2026-11-02-race-mode-plan-country-picker.md) |
 | Race mode backend: race API, storage and scoring (race step 2) | done, self-reviewed | see journal | [2026-11-02](journal/2026-11-02-race-backend.md) |
 | Race mode screen: start, countdown, side-by-side reveal, summary (race step 3) | done, self-reviewed | see journal | [2026-11-02](journal/2026-11-02-race-screen.md) |
+| Race with M1c (race step 4): desktop timing and scripted races | desktop half done (33 ms per race answer, 0 failures in 100 rounds); laptop timing and real races to do | see journal | [2026-11-02](journal/2026-11-02-race-with-m1c-desktop.md) |
 | Race history and model progress on a fixed photo set (race step 5) | done, self-reviewed | see journal | [2026-11-02](journal/2026-11-02-race-history.md) |
+| Race mode projector mode: "Class vs Model" (race step 6) | done, self-reviewed | see journal | [2026-11-02](journal/2026-11-02-race-projector.md) |
 | 4. Pack lifecycle and source tooling | planned | — | — |
 | 5. Curriculum pipeline | planned | — | — |
 | 6. Optional local model | planned | — | — |
@@ -46,6 +48,9 @@ The full plan is in
 - **Race the model**: five photo rounds against the enabled model, with an optional time
   limit per round, a side-by-side reveal after each answer and a summary. It needs a real
   model and a photo pack; with the placeholder it explains why it is off.
+- **Class vs Model** (projector mode): pick "The class (projector)" before starting. The race
+  gets big text, a full-width photo and a Full screen button; you type in the class's answer.
+  Class answers are scored but do not change your study review.
 - **Race history**: your record against the model over all finished races, overall and per
   model version, and "Model progress": each model version scored once on the same fixed photos
   (every photo of the loaded pack), totals only.
@@ -100,6 +105,7 @@ The full plan is in
 | 2026-11-02 | PRs #2–#4 merged into `main`; stale local branches deleted; kulo merges PRs, Claude only opens them | journal 2026-11-02 branch cleanup |
 | 2026-11-02 | Race mode: 1 point per right country, 5 rounds with a chosen time limit, no racing the dummy, race answers feed spaced repetition, projector-only class race; laptop vs desktop model decided by measurement | `docs/race-mode-plan.md` |
 | 2026-11-02 | Guesses are picked from a fixed offline list of every country (never built from pack answers) | journal 2026-11-02 race mode plan |
+| 2026-11-02 | Class (projector) races are stored with `player = class`; their answers are scored and kept as attempts but skip the spaced-repetition schedule | journal 2026-11-02 race projector |
 | 2026-11-02 | Races reuse practice attempts and the stored post-answer model prediction; late answers (limit + 5 s) count as skips; a model that fails or changes loses that round | journal 2026-11-02 race backend |
 | 2026-11-02 | Model progress compares versions on a fixed photo set named by a hash of its round ids, run once per version and set, totals only; race history counts finished races only | journal 2026-11-02 race history |
 
@@ -109,14 +115,13 @@ The full plan is in
   exported model, but only the weak smoke model exists until M1c, and it abstains on starter rounds (SVG
   diagrams, no photo). Stored predictions are keyed by model id and version, so bump the version on
   every retrain.
-- The laptop has no CUDA GPU, so real training runs on the RTX 3060 PC. Smoke runs pass
-  there (about 300 photos/s, so M1c is about 12–14 hours of training in sessions), but M1c
-  itself has not run yet.
+- The laptop has no CUDA GPU, so real training runs on the RTX 3060 PC. M1c took 16 epochs
+  of about 36 minutes there; its model files live only on the PC until copied over.
 - On the Windows PC the Python checks pass, except the web-bundle test, which runs `pnpm` from
   PATH; Node 24 is installed there now and `npx --yes pnpm@11.19.0 ...` runs the web checks.
   The symlink storage test skips without the symlink privilege.
-- Calibration now uses a sqrt class-weighted val (smoke model: test ECE 0.090 → 0.023), but
-  that was checked only on a weak smoke model; M1c must confirm it.
+- Calibration uses a sqrt class-weighted val. On M1c it cuts val ECE 0.090 → 0.014 but barely
+  moves test ECE (0.043 → 0.040), and the 0.8 val target precision gives 0.75 on test.
 - Photo rounds are opt-in (`GEO_COMPANION_PHOTO_PACK`) and come after the diagrams; guesses
   are still typed as two-letter codes. The smoke model abstains on 199 of 200 photos.
 - Photo upload works end to end, but the only real model on the PC (the M1c smoke model,

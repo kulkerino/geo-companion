@@ -1029,6 +1029,15 @@
         "title": "RaceModelRecord",
         "type": "object"
       },
+      "RacePlayer": {
+        "description": "Who races the model: the learner, or a class guessing together on a projector.",
+        "enum": [
+          "you",
+          "class"
+        ],
+        "title": "RacePlayer",
+        "type": "string"
+      },
       "RaceRoundPublic": {
         "additionalProperties": false,
         "description": "One race round before the answer: the public round only, never its answer.",
@@ -1269,8 +1278,12 @@
       },
       "RaceStartRequest": {
         "additionalProperties": false,
-        "description": "``time_limit_seconds`` is per round; null means no limit, as in GeoGuessr's settings.",
+        "description": "``time_limit_seconds`` is per round; null means no limit, as in GeoGuessr's settings.\nA ``class`` race records the class's answers but leaves the learner's study review alone.",
         "properties": {
+          "player": {
+            "$ref": "#/components/schemas/RacePlayer",
+            "default": "you"
+          },
           "time_limit_seconds": {
             "anyOf": [
               {
@@ -1293,6 +1306,10 @@
         "properties": {
           "model": {
             "$ref": "#/components/schemas/ModelInfo"
+          },
+          "player": {
+            "$ref": "#/components/schemas/RacePlayer",
+            "default": "you"
           },
           "race_id": {
             "minLength": 1,
@@ -1351,6 +1368,10 @@
             "minimum": 0.0,
             "title": "Model Missed Rounds",
             "type": "integer"
+          },
+          "player": {
+            "$ref": "#/components/schemas/RacePlayer",
+            "default": "you"
           },
           "race_id": {
             "minLength": 1,

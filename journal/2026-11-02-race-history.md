@@ -65,11 +65,10 @@ need M1c while training waits for the RTX 3060 PC.
   - Only the smoke model has been scored; the progress graph means something once M1c (and
     later models) are scored on the same pack.
   - The benchmark runs inside the request (a few seconds for 200 photos with the smoke model).
-  - Step 6 (PR #10) adds a `player` column (`you` or `class`). Whichever of the two PRs merges
-    second must make the history count only `player = 'you'` races, so a class race is not
-    counted as yours.
+  - Rebased on step 6 (PR #10, merged first): the history counts only `player = 'you'` races,
+    so a class (projector) race is never counted as yours. Test:
+    `test_class_races_are_left_out_of_your_history`.
 
 ## Follow-up
 
-Rebase on step 6 when it merges and filter class races out of the history; score M1c on the
-pack once it is exported (race mode step 4).
+Score M1c on the pack once it is exported (race mode step 4).

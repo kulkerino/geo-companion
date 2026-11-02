@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   GeoCompanionApiClient,
   type RaceAvailability,
+  type RacePlayer,
   type RaceRoundPublic,
   type RaceRoundResult,
   type RaceStarted,
@@ -34,8 +35,12 @@ function photoUrl(assetId: string) {
   return `/api/v1/assets/${encodeURIComponent(assetId)}`;
 }
 
-function scoreLine(learner: number, model: number) {
-  return `You ${learner} : ${model} Model`;
+function playerName(player: RacePlayer) {
+  return player === "class" ? "Class" : "You";
+}
+
+function scoreLine(player: RacePlayer, learner: number, model: number) {
+  return `${playerName(player)} ${learner} : ${model} Model`;
 }
 
 function secondsLeft(round: RaceRoundPublic, now: number) {
@@ -52,7 +57,7 @@ function Mark({ right }: { right: boolean }) {
   return <strong>{right ? "right" : "wrong"}</strong>;
 }
 
-function RoundReveal({ result }: { result: RaceRoundResult }) {
+function RoundReveal({ result, player }: { result: RaceRoundResult; player: RacePlayer }) {
   const { reveal, model_prediction: prediction } = result;
   const guess = reveal.submission.country_code;
   return (
@@ -60,9 +65,9 @@ function RoundReveal({ result }: { result: RaceRoundResult }) {
       <p>Answer: <strong>{country(reveal.answer.country_code)}</strong></p>
       <div className="race-sides">
         <div className="race-side">
-          <p className="model-name">You</p>
+          <p className="model-name">{playerName(player)}</p>
           {result.timed_out ? <p>Time ran out, so this round counts as a skip.</p>
-            : reveal.submission.skipped ? <p>You skipped.</p>
+            : reveal.submission.skipped ? <p>{player === "class" ? "The class skipped." : "You skipped."}</p>
             : <p>{guess ? country(guess) : "No guess"}: <Mark right={reveal.is_correct} /></p>}
           <p>+{result.learner_points}</p>
         </div>
@@ -79,7 +84,7 @@ function RoundReveal({ result }: { result: RaceRoundResult }) {
           <p>+{result.model_points}</p>
         </div>
       </div>
-      <p className="outcome" role="status">{scoreLine(result.score.learner, result.score.model)}</p>
+      <p className="outcome" role="status">{scoreLine(player, result.score.learner, result.score.model)}</p>
       <p>{reveal.answer.explanation}</p>
       {reveal.answer.citations.map((citation, index) => <AttributionDetails key={index} attribution={citation} label="Answer citation" />)}
     </div>
@@ -88,13 +93,15 @@ function RoundReveal({ result }: { result: RaceRoundResult }) {
 
 function Summary({ summary, onAgain }: { summary: RaceSummary; onAgain: () => void }) {
   const { learner, model } = summary.score;
-  const verdict = learner > model ? "You won!" : learner < model ? "The model won." : "It's a draw.";
+  const player = summary.player ?? "you";
+  const winner = player === "class" ? "The class won!" : "You won!";
+  const verdict = learner > model ? winner : learner < model ? "The model won." : "It's a draw.";
   return (
     <div aria-label="Race summary">
-      <p className="outcome">{verdict} {scoreLine(learner, model)}</p>
+      <p className="outcome">{verdict} {scoreLine(player, learner, model)}</p>
       <table className="accuracy">
         <caption>Every round of this race</caption>
-        <thead><tr><th scope="col">Round</th><th scope="col">Answer</th><th scope="col">You</th><th scope="col">Model</th></tr></thead>
+        <thead><tr><th scope="col">Round</th><th scope="col">Answer</th><th scope="col">{playerName(player)}</th><th scope="col">Model</th></tr></thead>
         <tbody>
           {summary.rounds.map((row) => <tr key={row.position}>
             <th scope="row">{row.position}</th>
@@ -105,7 +112,7 @@ function Summary({ summary, onAgain }: { summary: RaceSummary; onAgain: () => vo
         </tbody>
       </table>
       {summary.model_missed_rounds > 0 && <p className="origin">The model was unavailable for {summary.model_missed_rounds} of these rounds.</p>}
-      <p className="origin">Raced against {summary.model.model_id} {summary.model.version}. Your answers were also saved as practice for study review.</p>
+      <p className="origin">Raced against {summary.model.model_id} {summary.model.version}. {player === "class" ? "Class answers were not added to your study review." : "Your answers were also saved as practice for study review."}</p>
       <div className="actions"><button type="button" onClick={onAgain}>Race again</button></div>
     </div>
   );
@@ -114,6 +121,7 @@ function Summary({ summary, onAgain }: { summary: RaceSummary; onAgain: () => vo
 export function RaceMode() {
   const [availability, setAvailability] = useState<RaceAvailability | null>(null);
   const [limit, setLimit] = useState<number | null>(null);
+  const [player, setPlayer] = useState<RacePlayer>("you");
   const [race, setRace] = useState<RaceStarted | null>(null);
   const [round, setRound] = useState<RaceRoundPublic | null>(null);
   const [result, setResult] = useState<RaceRoundResult | null>(null);
@@ -150,7 +158,7 @@ export function RaceMode() {
   };
 
   const start = () => run(async () => {
-    const started = await client.start_race_api_v1_races_post({ time_limit_seconds: limit });
+    const started = await client.start_race_api_v1_races_post({ time_limit_seconds: limit, player });
     setRace(started);
     setSummary(null);
     await openRound(started.race_id, 1);
@@ -185,6 +193,15 @@ export function RaceMode() {
   };
 
   const left = round && !result ? secondsLeft(round, now) : null;
+  const racing: RacePlayer = race?.player ?? summary?.player ?? "you";
+  const projector = racing === "class" && (race !== null || summary !== null);
+
+  // Full screen is a nice-to-have on the projector; some browsers (and tests) do not offer it.
+  const canFullScreen = typeof document !== "undefined" && typeof document.documentElement.requestFullscreen === "function";
+  const fullScreen = () => {
+    if (document.fullscreenElement) void document.exitFullscreen?.();
+    else void document.documentElement.requestFullscreen().catch(() => setError("Full screen is not available in this browser."));
+  };
 
   useEffect(() => {
     if (!round || result || round.time_limit_seconds == null) return;
@@ -202,13 +219,20 @@ export function RaceMode() {
   }, [left, round, result, pending]);
 
   return (
-    <section aria-labelledby="race-title">
-      <h2 id="race-title">Race the model</h2>
+    <section aria-labelledby="race-title" className={projector ? "race-projector" : undefined}>
+      <h2 id="race-title">{projector ? "Class vs Model" : "Race the model"}</h2>
+      {projector && canFullScreen && <div className="actions"><button type="button" onClick={fullScreen}>Full screen</button></div>}
       {error && <p role="alert">{error}</p>}
       {!race && !summary && <>
         <p>You and the model guess the same 5 street-level photos. Neither of you sees the other's guess until you answer. Each right country is worth 1 point.</p>
         {!availability && !error && <p>Checking whether the model can race…</p>}
         {availability && !availability.available && <p className="notice">{availability.reason}</p>}
+        <label htmlFor="race-player">Who is racing</label>
+        <select id="race-player" value={player} onChange={(event) => setPlayer(event.target.value as RacePlayer)}>
+          <option value="you">You</option>
+          <option value="class">The class (projector)</option>
+        </select>
+        {player === "class" && <p className="origin">Show the race on the projector, let the class vote, then type in the class's answer. Class answers are not added to your study review.</p>}
         <label htmlFor="race-limit">Time limit per round</label>
         <select id="race-limit" value={limit ?? ""} onChange={(event) => setLimit(event.target.value === "" ? null : Number(event.target.value))}>
           {TIME_LIMITS.map((option) => <option key={option.label} value={option.seconds ?? ""}>{option.label}</option>)}
@@ -223,8 +247,8 @@ export function RaceMode() {
         <img className="fixture photo" src={photoUrl(round.round.asset_id)} alt={round.round.asset_description} />
         <AttributionDetails attribution={round.round.asset_attribution} label="Photo attribution" />
         {!result ? <div className="attempt">
-          <p className="origin">The model is ready. Its guess stays hidden until you answer.</p>
-          <label htmlFor="race-guess">Country guess (type to search, e.g. France or FR)</label>
+          <p className="origin">The model is ready. Its guess stays hidden until {racing === "class" ? "the class answers" : "you answer"}.</p>
+          <label htmlFor="race-guess">{racing === "class" ? "The class's guess" : "Country guess"} (type to search, e.g. France or FR)</label>
           <input id="race-guess" list="race-country-options" value={guess} onChange={(event) => setGuess(event.target.value)} autoComplete="off" />
           <datalist id="race-country-options">
             {COUNTRY_OPTIONS.map((option) => <option key={option.code} value={option.label} />)}
@@ -234,7 +258,7 @@ export function RaceMode() {
             <button type="button" disabled={pending} onClick={() => void answer(true)}>Skip</button>
           </div>
         </div> : <>
-          <RoundReveal result={result} />
+          <RoundReveal result={result} player={racing} />
           <div className="actions">
             <button type="button" disabled={pending} onClick={() => void next()}>{result.finished ? "See results" : "Next round"}</button>
           </div>

@@ -23,6 +23,7 @@ from geo_companion.contracts import (
     ModelPredictionResult,
     PracticeAnswerSubmission,
     PracticeRoundPublic,
+    RacePlayer,
     RaceRoundPublic,
     RaceRoundResult,
     RaceRoundSummary,
@@ -80,6 +81,11 @@ class RaceService:
                 );
                 """
             )
+            columns = {row["name"] for row in connection.execute("PRAGMA table_info(races)")}
+            if "player" not in columns:
+                connection.execute(
+                    "ALTER TABLE races ADD COLUMN player TEXT NOT NULL DEFAULT 'you'"
+                )
 
     def _photo_round_ids(self) -> list[str]:
         return [r.round_id for r in self.learning.rounds if r.asset_kind is AssetKind.PHOTO]
@@ -119,7 +125,7 @@ class RaceService:
             chosen = (fresh + used)[:RACE_ROUNDS]
             connection.execute(
                 "INSERT INTO races (race_id, learner_id, model_id, model_version, model_json, "
-                "time_limit_seconds, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "time_limit_seconds, created_at, player) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     race_id,
                     self.learning.learner_id,
@@ -128,6 +134,7 @@ class RaceService:
                     provider.info.model_dump_json(),
                     request.time_limit_seconds,
                     self.now().isoformat(),
+                    request.player.value,
                 ),
             )
             connection.executemany(
@@ -139,6 +146,7 @@ class RaceService:
             model=provider.info,
             rounds_total=len(chosen),
             time_limit_seconds=request.time_limit_seconds,
+            player=request.player,
         )
 
     def _race(self, connection: sqlite3.Connection, race_id: str) -> sqlite3.Row:
@@ -215,7 +223,10 @@ class RaceService:
         # A late answer counts as a skip, for the points and for spaced repetition alike.
         if late:
             submission = PracticeAnswerSubmission(skipped=True)
-        reveal = self.learning.submit_practice(row["round_id"], submission)
+        player = RacePlayer(race["player"])
+        reveal = self.learning.submit_practice(
+            row["round_id"], submission, record_review=player is RacePlayer.YOU
+        )
         race_model = ModelInfo.model_validate_json(race["model_json"])
         prediction = self._model_guess(race_model, reveal.attempt_id)
         model_country = (
@@ -317,6 +328,7 @@ class RaceService:
             race_id=race_id,
             model=ModelInfo.model_validate_json(race["model_json"]),
             time_limit_seconds=race["time_limit_seconds"],
+            player=RacePlayer(race["player"]),
             created_at=datetime.fromisoformat(race["created_at"]),
             finished_at=(
                 None if race["finished_at"] is None else datetime.fromisoformat(race["finished_at"])

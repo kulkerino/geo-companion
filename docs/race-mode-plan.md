@@ -123,7 +123,8 @@ Each PR has its own journal entry and a `PROGRESS.md` update, as usual.
    model version (M1c, then later models) scored on the same fixed set of race photos, so
    improvement between models is visible. Every race already stores the model id and version.
    Done on `feature/race-history`, see `journal/2026-11-02-race-history.md`.
-6. **Projector mode** ("Class vs Model"). LAN class race is dropped.
+6. **Projector mode** ("Class vs Model"). LAN class race is dropped. Done on
+   `feature/race-projector`, see `journal/2026-11-02-race-projector.md`.
 
 ## Decisions (kulo, 2026-11-02)
 

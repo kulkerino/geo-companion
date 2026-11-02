@@ -292,3 +292,38 @@ def test_race_api(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     schema = main.app.openapi()["components"]["schemas"]
     assert "answer" not in schema["RaceRoundPublic"]["properties"]
     assert "answer" not in schema["PracticeRoundPublic"]["properties"]
+
+
+def test_a_class_race_scores_normally_but_leaves_study_review_alone(tmp_path: Path) -> None:
+    from geo_companion.contracts import RacePlayer
+
+    learning, races, _ = make(tmp_path)
+    started = races.start(RaceStartRequest(player=RacePlayer.CLASS))
+    assert started.player is RacePlayer.CLASS
+    public = races.round(started.race_id, 1)
+    truth = answer_of(learning, public.round.round_id)
+    result = races.answer(started.race_id, 1, PracticeAnswerSubmission(country_code=truth))
+    assert result.learner_points == 1
+    assert result.reveal.study_progress is None
+    assert learning.next_review().progress is None
+    assert races.summary(started.race_id).player is RacePlayer.CLASS
+
+    solo = races.start(RaceStartRequest())
+    assert races.summary(solo.race_id).player is RacePlayer.YOU
+
+
+def test_an_old_races_table_gains_the_player_column(tmp_path: Path) -> None:
+    database = tmp_path / "runtime.sqlite3"
+    with sqlite3.connect(database) as connection:
+        connection.execute(
+            "CREATE TABLE races (race_id TEXT PRIMARY KEY, learner_id TEXT NOT NULL, "
+            "model_id TEXT NOT NULL, model_version TEXT NOT NULL, model_json TEXT NOT NULL, "
+            "time_limit_seconds INTEGER, created_at TEXT NOT NULL, finished_at TEXT)"
+        )
+    learning = LearningService(
+        database,
+        provider=DummyProvider(),
+        rounds=PRACTICE_ROUNDS + tuple(photo_round(i) for i in range(6)),
+    )
+    races = RaceService(learning, allow_placeholder_model=True)
+    assert races.summary(races.start(RaceStartRequest()).race_id).player.value == "you"

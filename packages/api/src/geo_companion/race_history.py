@@ -66,6 +66,7 @@ class RaceHistoryService:
                 "SUM(race_rounds.model_points) AS model, COUNT(*) AS rounds_total "
                 "FROM races JOIN race_rounds USING (race_id) "
                 "WHERE races.learner_id = ? AND races.finished_at IS NOT NULL "
+                "AND races.player = 'you' "  # class (projector) races are not your record
                 "GROUP BY races.race_id ORDER BY races.created_at DESC, races.rowid DESC",
                 (self.learning.learner_id,),
             ).fetchall()

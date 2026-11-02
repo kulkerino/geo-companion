@@ -8,6 +8,7 @@ from geo_companion.contracts import (
     ModelInfo,
     PracticeAnswerSubmission,
     PracticeRoundPublic,
+    RacePlayer,
     RaceStartRequest,
 )
 from geo_companion.learning import LearningService
@@ -17,9 +18,14 @@ from geo_companion.race_history import RaceHistoryService, photo_set_id
 from test_race import BrokenProvider, answer_of, api, make
 
 
-def play(learning: LearningService, races: RaceService, right: int) -> str:
+def play(
+    learning: LearningService,
+    races: RaceService,
+    right: int,
+    player: RacePlayer = RacePlayer.YOU,
+) -> str:
     """Finish one race, answering the first ``right`` rounds correctly and skipping the rest."""
-    race_id = races.start(RaceStartRequest()).race_id
+    race_id = races.start(RaceStartRequest(player=player)).race_id
     for position in range(1, 6):
         public = races.round(race_id, position)
         submission = (
@@ -67,6 +73,18 @@ def test_history_counts_only_finished_races_and_never_shows_answers(tmp_path: Pa
     dumped = result.model_dump_json()
     assert "round_id" not in dumped
     assert "country_code" not in dumped
+
+
+def test_class_races_are_left_out_of_your_history(tmp_path: Path) -> None:
+    learning, races, _ = make(tmp_path)
+    yours = play(learning, races, right=2)
+    class_race = play(learning, races, right=5, player=RacePlayer.CLASS)
+
+    result = RaceHistoryService(races).history()
+    assert [entry.race_id for entry in result.races] == [yours]
+    assert class_race not in result.model_dump_json()
+    assert (result.overall.races, result.overall.learner_points) == (1, 2)
+    assert [record.tally.races for record in result.by_model] == [1]
 
 
 def test_history_keeps_a_record_per_model_version(tmp_path: Path) -> None:

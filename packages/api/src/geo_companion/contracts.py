@@ -492,12 +492,21 @@ RACE_TIME_LIMIT_MIN_SECONDS = 10
 RACE_TIME_LIMIT_MAX_SECONDS = 600
 
 
+class RacePlayer(StrEnum):
+    """Who races the model: the learner, or a class guessing together on a projector."""
+
+    YOU = "you"
+    CLASS = "class"
+
+
 class RaceStartRequest(ContractModel):
-    """``time_limit_seconds`` is per round; null means no limit, as in GeoGuessr's settings."""
+    """``time_limit_seconds`` is per round; null means no limit, as in GeoGuessr's settings.
+    A ``class`` race records the class's answers but leaves the learner's study review alone."""
 
     time_limit_seconds: int | None = Field(
         default=None, ge=RACE_TIME_LIMIT_MIN_SECONDS, le=RACE_TIME_LIMIT_MAX_SECONDS
     )
+    player: RacePlayer = RacePlayer.YOU
 
 
 class RaceScore(ContractModel):
@@ -510,6 +519,7 @@ class RaceStarted(ContractModel):
     model: ModelInfo
     rounds_total: int = Field(ge=1)
     time_limit_seconds: int | None = None
+    player: RacePlayer = RacePlayer.YOU
 
 
 class RaceRoundPublic(ContractModel):
@@ -560,6 +570,7 @@ class RaceSummary(ContractModel):
     race_id: str = Field(min_length=1)
     model: ModelInfo
     time_limit_seconds: int | None = None
+    player: RacePlayer = RacePlayer.YOU
     created_at: datetime
     finished_at: datetime | None = None
     rounds: tuple[RaceRoundSummary, ...]

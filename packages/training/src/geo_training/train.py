@@ -168,7 +168,8 @@ def train(
     best_accuracy = -1.0
     first_epoch = 0
     if resume:
-        state = torch.load(last_path, map_location=device, weights_only=False)
+        # Load on the CPU: the RNG states must stay CPU tensors, and load_state_dict moves the rest.
+        state = torch.load(last_path, map_location="cpu", weights_only=False)
         model.load_state_dict(state["model"])
         optimiser.load_state_dict(state["optimiser"])
         scaler.load_state_dict(state["scaler"])
