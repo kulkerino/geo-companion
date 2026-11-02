@@ -162,6 +162,8 @@ export interface RaceAvailability {
   reason?: string | null;
 }
 
+export type RacePlayer = "you" | "class";
+
 export interface RaceRoundPublic {
   race_id: string;
   position: number;
@@ -205,6 +207,7 @@ export interface RaceScore {
 
 export interface RaceStartRequest {
   time_limit_seconds?: number | null;
+  player?: RacePlayer;
 }
 
 export interface RaceStarted {
@@ -212,12 +215,14 @@ export interface RaceStarted {
   model: ModelInfo;
   rounds_total: number;
   time_limit_seconds?: number | null;
+  player?: RacePlayer;
 }
 
 export interface RaceSummary {
   race_id: string;
   model: ModelInfo;
   time_limit_seconds?: number | null;
+  player?: RacePlayer;
   created_at: string;
   finished_at?: string | null;
   rounds: Array<RaceRoundSummary>;

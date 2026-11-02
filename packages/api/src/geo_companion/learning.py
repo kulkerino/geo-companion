@@ -137,8 +137,10 @@ class LearningService:
         return PracticeClue(round_id=round_id, clue=self._round(round_id).clue)
 
     def submit_practice(
-        self, round_id: str, submission: PracticeAnswerSubmission
+        self, round_id: str, submission: PracticeAnswerSubmission, *, record_review: bool = True
     ) -> PracticeAnswerResult:
+        """Store the attempt and reveal the answer. ``record_review=False`` (a class guessing
+        together in a projector race) leaves this learner's spaced-repetition schedule alone."""
         round_ = self._round(round_id)
         is_correct = (
             not submission.skipped and submission.country_code == round_.answer.country_code
@@ -174,7 +176,9 @@ class LearningService:
             attempt_id=attempt_id,
             is_correct=is_correct,
             submission=submission,
-            study_progress=self.schedule_review(round_id, quality, submitted_at),
+            study_progress=(
+                self.schedule_review(round_id, quality, submitted_at) if record_review else None
+            ),
         )
 
     def record_feedback(self, feedback: Feedback) -> None:

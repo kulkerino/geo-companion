@@ -74,7 +74,7 @@ describe("RaceMode", () => {
     const summary = await screen.findByLabelText("Race summary");
     expect(summary).toHaveTextContent("The model won. You 1 : 2 Model");
     expect(summary).toHaveTextContent("skipped (+0)");
-    expect(requests.find((r) => r.method === "POST" && r.url.endsWith("/races"))?.body).toEqual({ time_limit_seconds: 60 });
+    expect(requests.find((r) => r.method === "POST" && r.url.endsWith("/races"))?.body).toEqual({ time_limit_seconds: 60, player: "you" });
     expect(requests.filter((r) => r.url.endsWith("/answers")).map((r) => r.body)).toEqual([{ country_code: "SK" }, { skipped: true }]);
     fireEvent.click(screen.getByRole("button", { name: "Race again" }));
     expect(screen.getByRole("button", { name: "Start race" })).toBeInTheDocument();
@@ -99,5 +99,41 @@ describe("RaceMode", () => {
     fireEvent.click(start);
     expect(await screen.findByText(/Time ran out/)).toBeInTheDocument();
     expect(answers).toEqual([{ skipped: true }]);
+  });
+
+  it("runs a projector race for the class with Class labels and a class verdict", async () => {
+    const starts: unknown[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/races/availability")) return json({ available: true });
+      if (url.endsWith("/races") && method === "POST") {
+        starts.push(JSON.parse(String(init?.body)));
+        return json({ race_id: "r-1", model, rounds_total: 2, time_limit_seconds: null, player: "class" }, 201);
+      }
+      if (url.endsWith("/rounds/2")) return json(publicRound(2, new Date().toISOString()));
+      if (url.endsWith("/rounds/2/answers")) return json(result(2, { skipped: true }, false, { score: { learner: 3, model: 2 } }));
+      if (url.endsWith("/races/r-1")) return json({ race_id: "r-1", model, player: "class", time_limit_seconds: null, created_at: "2026-11-02T12:00:00Z", finished_at: "2026-11-02T12:02:00Z", score: { learner: 3, model: 2 }, model_missed_rounds: 0, rounds: [] });
+      // The class race opens on its final round so one answer finishes it.
+      if (url.endsWith("/rounds/1")) return json(publicRound(2, new Date().toISOString()));
+      return json({ detail: "Unexpected request" }, 500);
+    }));
+    render(<RaceMode />);
+    const start = await screen.findByRole("button", { name: "Start race" });
+    await waitFor(() => expect(start).toBeEnabled());
+    fireEvent.change(screen.getByLabelText("Who is racing"), { target: { value: "class" } });
+    expect(screen.getByText(/not added to your study review/)).toBeInTheDocument();
+    fireEvent.click(start);
+
+    expect(await screen.findByRole("heading", { name: "Class vs Model" })).toBeInTheDocument();
+    expect(screen.getByLabelText(/The class's guess/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Skip" }));
+    expect(await screen.findByText("The class skipped.")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Class 3 : 2 Model");
+    fireEvent.click(screen.getByRole("button", { name: "See results" }));
+    const summary = await screen.findByLabelText("Race summary");
+    expect(summary).toHaveTextContent("The class won! Class 3 : 2 Model");
+    expect(summary).toHaveTextContent("Class answers were not added to your study review.");
+    expect(starts).toEqual([{ time_limit_seconds: null, player: "class" }]);
   });
 });
