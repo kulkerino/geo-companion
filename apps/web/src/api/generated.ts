@@ -157,6 +157,74 @@ export interface PracticeRoundPublic {
   asset_description: string;
 }
 
+export interface RaceAvailability {
+  available: boolean;
+  reason?: string | null;
+}
+
+export interface RaceRoundPublic {
+  race_id: string;
+  position: number;
+  rounds_total: number;
+  round: PracticeRoundPublic;
+  started_at: string;
+  time_limit_seconds?: number | null;
+}
+
+export interface RaceRoundResult {
+  race_id: string;
+  position: number;
+  reveal: PracticeAnswerResult;
+  model_prediction?: ModelPredictionResult | null;
+  model_unavailable: boolean;
+  timed_out: boolean;
+  learner_points: number;
+  model_points: number;
+  score: RaceScore;
+  finished: boolean;
+}
+
+export interface RaceRoundSummary {
+  position: number;
+  round_id: string;
+  asset_id: string;
+  answered: boolean;
+  answer_country_code?: string | null;
+  learner_country_code?: string | null;
+  model_country_code?: string | null;
+  learner_points?: number | null;
+  model_points?: number | null;
+  timed_out?: boolean;
+  model_unavailable?: boolean;
+}
+
+export interface RaceScore {
+  learner: number;
+  model: number;
+}
+
+export interface RaceStartRequest {
+  time_limit_seconds?: number | null;
+}
+
+export interface RaceStarted {
+  race_id: string;
+  model: ModelInfo;
+  rounds_total: number;
+  time_limit_seconds?: number | null;
+}
+
+export interface RaceSummary {
+  race_id: string;
+  model: ModelInfo;
+  time_limit_seconds?: number | null;
+  created_at: string;
+  finished_at?: string | null;
+  rounds: Array<RaceRoundSummary>;
+  score: RaceScore;
+  model_missed_rounds: number;
+}
+
 export type RightsStatus = "cleared" | "reference-only" | "quarantined";
 
 export interface SourceTruthAnswer {
@@ -283,6 +351,36 @@ export class GeoCompanionApiClient {
   async get_practice_clue_api_v1_practice_rounds__round_id__clue_get(round_id: string): Promise<PracticeClue> {
     return this.request<PracticeClue>(
       "GET", "/api/v1/practice/rounds/{round_id}/clue", { "round_id": String(round_id) }, undefined,
+    );
+  }
+
+  async start_race_api_v1_races_post(body: RaceStartRequest): Promise<RaceStarted> {
+    return this.request<RaceStarted>(
+      "POST", "/api/v1/races", {}, body,
+    );
+  }
+
+  async race_availability_api_v1_races_availability_get(): Promise<RaceAvailability> {
+    return this.request<RaceAvailability>(
+      "GET", "/api/v1/races/availability", {}, undefined,
+    );
+  }
+
+  async get_race_api_v1_races__race_id__get(race_id: string): Promise<RaceSummary> {
+    return this.request<RaceSummary>(
+      "GET", "/api/v1/races/{race_id}", { "race_id": String(race_id) }, undefined,
+    );
+  }
+
+  async get_race_round_api_v1_races__race_id__rounds__position__get(race_id: string, position: number): Promise<RaceRoundPublic> {
+    return this.request<RaceRoundPublic>(
+      "GET", "/api/v1/races/{race_id}/rounds/{position}", { "race_id": String(race_id), "position": String(position) }, undefined,
+    );
+  }
+
+  async answer_race_round_api_v1_races__race_id__rounds__position__answers_post(race_id: string, position: number, body: PracticeAnswerSubmission): Promise<RaceRoundResult> {
+    return this.request<RaceRoundResult>(
+      "POST", "/api/v1/races/{race_id}/rounds/{position}/answers", { "race_id": String(race_id), "position": String(position) }, body,
     );
   }
 

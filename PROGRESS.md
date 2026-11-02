@@ -6,7 +6,7 @@ work that changes it; detailed evidence for each session goes in [`journal/`](jo
 **Last updated:** 2026-11-02
 **Branch:** `main`. PRs #1–#4 are merged, and new work goes on short branches with one PR each into `main`, which kulo merges.
 **GitHub:** [kulkerino/geo-companion](https://github.com/kulkerino/geo-companion) (public, because the professor needs access), remote `origin`; branches `main` and the separate school branch `rocnikovy-projekt` (no shared history, never merged)
-**Next step:** race mode PR 2 (race backend), see [`docs/race-mode-plan.md`](docs/race-mode-plan.md). In parallel, kulo finishes M1c on the RTX 3060 PC (the last 2 of 16 epochs, then eval and export) (data is already on the RTX 3060 PC; about 12–14 hours in total, resumable), following [`docs/runbook-m1c-rtx-3060.md`](docs/runbook-m1c-rtx-3060.md); then load the M1c model with the photo pack, and the independent M1 review.
+**Next step:** race mode step 3 (race screen), see [`docs/race-mode-plan.md`](docs/race-mode-plan.md). In parallel, kulo finishes M1c on the RTX 3060 PC (the last 2 of 16 epochs, then eval and export) (data is already on the RTX 3060 PC; about 12–14 hours in total, resumable), following [`docs/runbook-m1c-rtx-3060.md`](docs/runbook-m1c-rtx-3060.md); then load the M1c model with the photo pack, and the independent M1 review.
 
 ## Task status
 
@@ -28,6 +28,7 @@ work that changes it; detailed evidence for each session goes in [`journal/`](jo
 | OSV-5M photo display OK; full country names after the answer | done, self-reviewed | see journal | [2026-11-01](journal/2026-11-01-photo-display-ok-country-names.md) |
 | Model accuracy page: held-out results of the enabled model | done, self-reviewed | see journal | [2026-11-02](journal/2026-11-02-model-accuracy-page.md) |
 | Race mode plan; searchable country list for guesses (race step 1) | done, self-reviewed | see journal | [2026-11-02](journal/2026-11-02-race-mode-plan-country-picker.md) |
+| Race mode backend: race API, storage and scoring (race step 2) | done, self-reviewed | see journal | [2026-11-02](journal/2026-11-02-race-backend.md) |
 | 4. Pack lifecycle and source tooling | planned | — | — |
 | 5. Curriculum pipeline | planned | — | — |
 | 6. Optional local model | planned | — | — |
@@ -91,6 +92,7 @@ The full plan is in
 | 2026-11-02 | PRs #2–#4 merged into `main`; stale local branches deleted; kulo merges PRs, Claude only opens them | journal 2026-11-02 branch cleanup |
 | 2026-11-02 | Race mode: 1 point per right country, 5 rounds with a chosen time limit, no racing the dummy, race answers feed spaced repetition, projector-only class race; laptop vs desktop model decided by measurement | `docs/race-mode-plan.md` |
 | 2026-11-02 | Guesses are picked from a fixed offline list of every country (never built from pack answers) | journal 2026-11-02 race mode plan |
+| 2026-11-02 | Races reuse practice attempts and the stored post-answer model prediction; late answers (limit + 5 s) count as skips; a model that fails or changes loses that round | journal 2026-11-02 race backend |
 
 ## Known gaps
 
