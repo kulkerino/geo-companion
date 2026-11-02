@@ -6,7 +6,7 @@ work that changes it; detailed evidence for each session goes in [`journal/`](jo
 **Last updated:** 2026-11-02
 **Branch:** `main`. PRs #1–#4 are merged, and new work goes on short branches with one PR each into `main`, which kulo merges.
 **GitHub:** [kulkerino/geo-companion](https://github.com/kulkerino/geo-companion) (public, because the professor needs access), remote `origin`; branches `main` and the separate school branch `rocnikovy-projekt` (no shared history, never merged)
-**Next step:** kulo finishes M1c on the RTX 3060 PC (the last 2 of 16 epochs, then eval and export) (data is already on the RTX 3060 PC; about 12–14 hours in total, resumable), following [`docs/runbook-m1c-rtx-3060.md`](docs/runbook-m1c-rtx-3060.md); then load the M1c model with the photo pack, and the independent M1 review.
+**Next step:** race mode PR 2 (race backend), see [`docs/race-mode-plan.md`](docs/race-mode-plan.md). In parallel, kulo finishes M1c on the RTX 3060 PC (the last 2 of 16 epochs, then eval and export) (data is already on the RTX 3060 PC; about 12–14 hours in total, resumable), following [`docs/runbook-m1c-rtx-3060.md`](docs/runbook-m1c-rtx-3060.md); then load the M1c model with the photo pack, and the independent M1 review.
 
 ## Task status
 
@@ -27,6 +27,7 @@ work that changes it; detailed evidence for each session goes in [`journal/`](jo
 | Photo upload: the model's top-3 guess or abstention on your own photo | done, self-reviewed; merged into `main` via PR #4 and PR #3 | see journal | [2026-10-26](journal/2026-10-26-photo-upload.md) |
 | OSV-5M photo display OK; full country names after the answer | done, self-reviewed | see journal | [2026-11-01](journal/2026-11-01-photo-display-ok-country-names.md) |
 | Model accuracy page: held-out results of the enabled model | done, self-reviewed | see journal | [2026-11-02](journal/2026-11-02-model-accuracy-page.md) |
+| Race mode plan; searchable country list for guesses (race step 1) | done, self-reviewed | see journal | [2026-11-02](journal/2026-11-02-race-mode-plan-country-picker.md) |
 | 4. Pack lifecycle and source tooling | planned | — | — |
 | 5. Curriculum pipeline | planned | — | — |
 | 6. Optional local model | planned | — | — |
@@ -39,6 +40,8 @@ The full plan is in
 
 ## What works today
 
+- Guesses are picked from a searchable list of every country (type a name or a code, e.g.
+  France or FR); the answer is still sent as the two-letter code.
 - Open Practice on ten original CC0 diagrams. You get an optional clue, then guess, guess
   marked uncertain, or skip; the answer and explanation are revealed afterwards. You can
   report a problem with an attempt, retry the same round, or move to the next round.
@@ -86,6 +89,8 @@ The full plan is in
 | 2026-11-01 | OSV-5M photos cleared for display in the app too (kulo: "i mean yea sure"); photos stay in app data, never in the repo | journal 2026-11-01 photo display OK |
 | 2026-11-01 | Countries are shown as `Name (CODE)` after the answer, via the browser's offline `Intl.DisplayNames` | journal 2026-11-01 photo display OK |
 | 2026-11-02 | PRs #2–#4 merged into `main`; stale local branches deleted; kulo merges PRs, Claude only opens them | journal 2026-11-02 branch cleanup |
+| 2026-11-02 | Race mode: 1 point per right country, 5 rounds with a chosen time limit, no racing the dummy, race answers feed spaced repetition, projector-only class race; laptop vs desktop model decided by measurement | `docs/race-mode-plan.md` |
+| 2026-11-02 | Guesses are picked from a fixed offline list of every country (never built from pack answers) | journal 2026-11-02 race mode plan |
 
 ## Known gaps
 

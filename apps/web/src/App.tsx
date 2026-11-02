@@ -13,6 +13,7 @@ import {
   type StudyProgress,
 } from "./api/generated";
 import "./app.css";
+import { COUNTRY_OPTIONS, country, parseCountryGuess } from "./countries";
 
 const client = new GeoCompanionApiClient();
 type View = "practice" | "study" | "photo" | "accuracy";
@@ -20,19 +21,6 @@ const PHOTO_TYPES = "image/jpeg,image/png,image/webp";
 
 function message(error: unknown) {
   return error instanceof Error ? error.message : "The local learning service is unavailable.";
-}
-
-// The browser's built-in region names work offline; the code stays visible for typing guesses.
-const regionNames = new Intl.DisplayNames(["en"], { type: "region", fallback: "code" });
-
-function country(code: string) {
-  let name: string | undefined;
-  try {
-    name = regionNames.of(code);
-  } catch {
-    name = undefined;
-  }
-  return name && name !== code ? `${name} (${code})` : code;
 }
 
 function days(count: number) {
@@ -278,8 +266,11 @@ function App() {
 
   const revealClue = (roundId: string) => run(async () => setClue((await client.get_practice_clue_api_v1_practice_rounds__round_id__clue_get(roundId)).clue));
 
+  const guessCode = parseCountryGuess(guess);
+  const validGuess = guessCode !== null;
+
   const submitPractice = (roundId: string, skipped: boolean, uncertain: boolean) => run(async () => {
-    const body = skipped ? { skipped: true, uncertain } : { country_code: guess.trim().toUpperCase(), uncertain };
+    const body = skipped ? { skipped: true, uncertain } : { country_code: guessCode ?? undefined, uncertain };
     setReveal(await client.submit_practice_answer_api_v1_practice_rounds__round_id__answers_post(roundId, body));
   });
 
@@ -302,7 +293,6 @@ function App() {
     if (round) startRound(round);
   };
 
-  const validGuess = /^[A-Za-z]{2}$/.test(guess.trim());
 
   return (
     <main className="shell">
@@ -327,8 +317,12 @@ function App() {
           {!reveal ? <div className="attempt">
             <button type="button" onClick={() => void revealClue(round.round_id)}>Reveal optional clue</button>
             {clue && <p className="clue">{clue}</p>}
-            <label htmlFor="guess">Country-code guess (two letters, e.g. FR)</label>
-            <input id="guess" value={guess} onChange={(event) => setGuess(event.target.value)} maxLength={2} autoComplete="off" />
+            <label htmlFor="guess">Country guess (type to search, e.g. France or FR)</label>
+            <input id="guess" list="country-options" value={guess} onChange={(event) => setGuess(event.target.value)} autoComplete="off" />
+            <datalist id="country-options">
+              {COUNTRY_OPTIONS.map((option) => <option key={option.code} value={option.label} />)}
+            </datalist>
+            {guess.trim() && !validGuess && <p className="origin">Pick a country from the list, or type its full name or two-letter code.</p>}
             <div className="actions">
               <button type="button" disabled={pending || !validGuess} onClick={() => void submitPractice(round.round_id, false, false)}>Submit guess</button>
               <button type="button" disabled={pending || !validGuess} onClick={() => void submitPractice(round.round_id, false, true)}>Submit uncertain guess</button>

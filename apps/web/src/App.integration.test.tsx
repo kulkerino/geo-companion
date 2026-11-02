@@ -58,7 +58,7 @@ describe("App with the real API and SQLite", () => {
     expect(pageText()).not.toMatch(/Slovakia|Answer:/);
 
     // A wrong confident guess is scored by the API and reveals the authored target.
-    fireEvent.change(screen.getByLabelText(/Country-code guess/), { target: { value: "cz" } });
+    fireEvent.change(screen.getByLabelText(/Country guess/), { target: { value: "cz" } });
     fireEvent.click(screen.getByRole("button", { name: "Submit guess" }));
     expect(await screen.findByText("Not correct: you guessed Czechia (CZ).")).toBeInTheDocument();
     expect(screen.getByText("Slovakia (SK)")).toBeInTheDocument();
@@ -87,9 +87,9 @@ describe("App with the real API and SQLite", () => {
     // Retry keeps the same round and clears the attempt; an uncertain correct answer is scored.
     fireEvent.click(screen.getByRole("button", { name: "Retry same round" }));
     expect(screen.getByRole("img", { name: /BRATISLAVA/ })).toBeInTheDocument();
-    expect(screen.getByLabelText(/Country-code guess/)).toHaveValue("");
+    expect(screen.getByLabelText(/Country guess/)).toHaveValue("");
     expect(pageText()).not.toMatch(/Slovakia|Answer:|Read both panels/);
-    fireEvent.change(screen.getByLabelText(/Country-code guess/), { target: { value: "SK" } });
+    fireEvent.change(screen.getByLabelText(/Country guess/), { target: { value: "SK" } });
     fireEvent.click(screen.getByRole("button", { name: "Submit uncertain guess" }));
     expect(await screen.findByText("Correct (marked uncertain).")).toBeInTheDocument();
     expect(screen.getByText(`Next review of starter-place-01 on ${utcDate(1)} (interval 1 day, ease 2.04).`)).toBeInTheDocument();
