@@ -49,3 +49,11 @@ label { display: block; margin-top: 1rem; }
 .race-sides { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 1rem; }
 .race-side { border: 1px solid #d6ddd4; border-radius: 0.35rem; padding: 0.4rem 0.8rem; }
 .race-clock { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+/* Projector mode: readable from the back of a classroom, using the whole screen width. */
+.shell:has(.race-projector) { max-width: min(96vw, 110rem); }
+.race-projector { font-size: 1.35rem; }
+.race-projector h2 { font-size: 2.4rem; }
+.race-projector .fixture.photo { width: 100%; max-height: 72vh; object-fit: contain; }
+.race-projector .race-clock { font-size: 3rem; }
+.race-projector .outcome { font-size: 2.2rem; font-weight: 700; }
+.race-projector .race-side .model-name { font-size: 1.6rem; }

@@ -30,6 +30,7 @@ work that changes it; detailed evidence for each session goes in [`journal/`](jo
 | Race mode plan; searchable country list for guesses (race step 1) | done, self-reviewed | see journal | [2026-11-02](journal/2026-11-02-race-mode-plan-country-picker.md) |
 | Race mode backend: race API, storage and scoring (race step 2) | done, self-reviewed | see journal | [2026-11-02](journal/2026-11-02-race-backend.md) |
 | Race mode screen: start, countdown, side-by-side reveal, summary (race step 3) | done, self-reviewed | see journal | [2026-11-02](journal/2026-11-02-race-screen.md) |
+| Race mode projector mode: "Class vs Model" (race step 6) | done, self-reviewed | see journal | [2026-11-02](journal/2026-11-02-race-projector.md) |
 | 4. Pack lifecycle and source tooling | planned | — | — |
 | 5. Curriculum pipeline | planned | — | — |
 | 6. Optional local model | planned | — | — |
@@ -45,6 +46,9 @@ The full plan is in
 - **Race the model**: five photo rounds against the enabled model, with an optional time
   limit per round, a side-by-side reveal after each answer and a summary. It needs a real
   model and a photo pack; with the placeholder it explains why it is off.
+- **Class vs Model** (projector mode): pick "The class (projector)" before starting. The race
+  gets big text, a full-width photo and a Full screen button; you type in the class's answer.
+  Class answers are scored but do not change your study review.
 - Guesses are picked from a searchable list of every country (type a name or a code, e.g.
   France or FR); the answer is still sent as the two-letter code.
 - Open Practice on ten original CC0 diagrams. You get an optional clue, then guess, guess
@@ -96,6 +100,7 @@ The full plan is in
 | 2026-11-02 | PRs #2–#4 merged into `main`; stale local branches deleted; kulo merges PRs, Claude only opens them | journal 2026-11-02 branch cleanup |
 | 2026-11-02 | Race mode: 1 point per right country, 5 rounds with a chosen time limit, no racing the dummy, race answers feed spaced repetition, projector-only class race; laptop vs desktop model decided by measurement | `docs/race-mode-plan.md` |
 | 2026-11-02 | Guesses are picked from a fixed offline list of every country (never built from pack answers) | journal 2026-11-02 race mode plan |
+| 2026-11-02 | Class (projector) races are stored with `player = class`; their answers are scored and kept as attempts but skip the spaced-repetition schedule | journal 2026-11-02 race projector |
 | 2026-11-02 | Races reuse practice attempts and the stored post-answer model prediction; late answers (limit + 5 s) count as skips; a model that fails or changes loses that round | journal 2026-11-02 race backend |
 
 ## Known gaps
