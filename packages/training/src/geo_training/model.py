@@ -1,6 +1,12 @@
-"""A ResNet-18-style country classifier, randomly initialised (no pretrained weights)."""
+"""Country classifiers: CountryNet (ResNet-18 style, trained from scratch) and pretrained nets.
+
+A pretrained network has already learned to see from hundreds of millions of photos, so it
+needs far fewer GeoGuessr-style images to tell countries apart than a net starting from zero.
+"""
 
 from __future__ import annotations
+
+from typing import Any
 
 import torch
 from torch import nn
@@ -66,3 +72,63 @@ class CountryNet(nn.Module):
         features = self.pool(self.stages(self.stem(x))).flatten(1)
         logits: torch.Tensor = self.head(features)
         return logits
+
+
+# Short names for the pretrained networks the runbook uses. "timm:<name>" picks any other
+# timm model (the tests use a tiny untrained one).
+BACKBONES = {
+    "clip-b16": "vit_base_patch16_clip_224.openai",
+    "convnext-t": "convnext_tiny.fb_in22k",
+}
+# The app feeds every model images normalised with ImageNet's mean and std.
+APP_MEAN = (0.485, 0.456, 0.406)
+APP_STD = (0.229, 0.224, 0.225)
+
+
+def timm_name(backbone: str) -> str:
+    if backbone.startswith("timm:"):
+        return backbone.removeprefix("timm:")
+    if backbone not in BACKBONES:
+        known = ", ".join(["countrynet", *BACKBONES])
+        raise SystemExit(f"Unknown --backbone {backbone!r}; choose one of {known} or timm:<name>.")
+    return BACKBONES[backbone]
+
+
+class PretrainedNet(nn.Module):
+    """A pretrained timm network with a fresh country layer on top.
+
+    Inputs arrive normalised the way the app normalises them; a fixed per-channel scale and
+    shift turns that into the normalisation the network was pretrained with, so the app and
+    its manifest stay the same for every backbone.
+    """
+
+    def __init__(self, num_classes: int, backbone: str, pretrained: bool = True) -> None:
+        super().__init__()
+        import timm
+
+        body = timm.create_model(timm_name(backbone), pretrained=pretrained, num_classes=0)
+        config: dict[str, Any] = dict(getattr(body, "pretrained_cfg", {}))
+        mean: tuple[float, ...] = tuple(config.get("mean", APP_MEAN))
+        std: tuple[float, ...] = tuple(config.get("std", APP_STD))
+        features = int(getattr(body, "num_features"))  # noqa: B009
+        scale = [a / b for a, b in zip(APP_STD, std, strict=True)]
+        shift = [(m0 - m1) / s1 for m0, m1, s1 in zip(APP_MEAN, mean, std, strict=True)]
+        self.body: nn.Module = body
+        self.scale: torch.Tensor
+        self.shift: torch.Tensor
+        self.register_buffer("scale", torch.tensor(scale).view(1, 3, 1, 1))
+        self.register_buffer("shift", torch.tensor(shift).view(1, 3, 1, 1))
+        self.head = nn.Linear(features, num_classes)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        logits: torch.Tensor = self.head(self.body(x * self.scale + self.shift))
+        return logits
+
+
+def build_model(
+    num_classes: int, backbone: str = "countrynet", width: int = 64, pretrained: bool = True
+) -> nn.Module:
+    """CountryNet for ``backbone="countrynet"``, otherwise a pretrained network."""
+    if backbone == "countrynet":
+        return CountryNet(num_classes, width=width)
+    return PretrainedNet(num_classes, backbone, pretrained=pretrained)

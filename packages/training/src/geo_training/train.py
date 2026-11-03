@@ -22,7 +22,7 @@ from torch import nn
 from torch.utils.data import DataLoader, Dataset, WeightedRandomSampler
 
 from geo_training.metadata import Sample
-from geo_training.model import CountryNet
+from geo_training.model import build_model
 from geo_training.preprocess import eval_array, load_rgb, train_array
 
 
@@ -42,6 +42,10 @@ class TrainConfig:
     device: str = "auto"
     # A finished run folder (config.json + final.pt) to fine-tune from instead of random weights.
     init_from: str | None = None
+    # "countrynet" (from scratch) or a pretrained network such as "clip-b16"; see model.py.
+    backbone: str = "countrynet"
+    # Pretrained networks learn their new country layer this many times faster than the rest.
+    head_lr_scale: float = 10.0
 
 
 # Settings that may change between the sessions of one run; everything else must match.
@@ -105,7 +109,9 @@ def predict_logits(
     return torch.cat(all_logits), torch.cat(all_labels)
 
 
-def initialise_from_run(model: CountryNet, classes: Sequence[str], run_dir: Path) -> int:
+def initialise_from_run(
+    model: nn.Module, classes: Sequence[str], run_dir: Path, backbone: str = "countrynet"
+) -> int:
     """Copy a finished run's weights into ``model``; return how many countries it already knew.
 
     Everything but the final layer is copied as is. The final layer is matched row by row on
@@ -114,12 +120,18 @@ def initialise_from_run(model: CountryNet, classes: Sequence[str], run_dir: Path
     """
     saved = json.loads((run_dir / "config.json").read_text(encoding="utf-8"))
     state = torch.load(run_dir / "final.pt", map_location="cpu")
-    if state["head.weight"].shape[1] != model.head.in_features:
+    saved_backbone = saved.get("backbone", "countrynet")
+    if saved_backbone != backbone:
+        msg = f"{run_dir} uses backbone {saved_backbone}; pass that --backbone."
+        raise SystemExit(msg)
+    head = model.get_submodule("head")
+    assert isinstance(head, nn.Linear)
+    if state["head.weight"].shape[1] != head.in_features:
         msg = f"{run_dir} was trained with width {saved['width']}; pass the same --width."
         raise SystemExit(msg)
     old_index = {code: index for index, code in enumerate(saved["classes"])}
-    head_weight = model.head.weight.detach().clone()
-    head_bias = model.head.bias.detach().clone()
+    head_weight = head.weight.detach().clone()
+    head_bias = head.bias.detach().clone()
     known = 0
     for index, code in enumerate(classes):
         if code in old_index:
@@ -141,7 +153,7 @@ def train(
     *,
     resume: bool = False,
     max_hours: float | None = None,
-) -> CountryNet | None:
+) -> nn.Module | None:
     """Train from random initialisation, log per-epoch metrics, and keep the best checkpoint.
 
     With ``max_hours``, stop after the first epoch past which the next one would not fit in
@@ -176,12 +188,13 @@ def train(
         generator=loader_generator,
         persistent_workers=False,
     )
-    model = CountryNet(len(classes), width=config.width)
+    # A resumed run loads its own weights, so it skips the pretrained download.
+    model = build_model(len(classes), config.backbone, config.width, pretrained=not resume)
     if config.init_from and not resume:
-        initialise_from_run(model, classes, Path(config.init_from))
+        initialise_from_run(model, classes, Path(config.init_from), config.backbone)
     model = model.to(device)
     optimiser = torch.optim.AdamW(
-        model.parameters(), lr=config.learning_rate, weight_decay=config.weight_decay
+        _parameter_groups(model, config), lr=config.learning_rate, weight_decay=config.weight_decay
     )
     total_steps = max(1, config.epochs * len(loader))
     warmup_steps = round(config.warmup_epochs * len(loader))
@@ -275,11 +288,26 @@ def train(
     return model
 
 
+def _parameter_groups(model: nn.Module, config: TrainConfig) -> list[dict[str, object]]:
+    if config.backbone == "countrynet":
+        return [{"params": list(model.parameters())}]
+    head = list(model.get_submodule("head").parameters())
+    head_ids = {id(p) for p in head}
+    body = [p for p in model.parameters() if id(p) not in head_ids]
+    return [
+        {"params": body},
+        {"params": head, "lr": config.learning_rate * config.head_lr_scale},
+    ]
+
+
 def _check_resumable(config_path: Path, config: TrainConfig, classes: Sequence[str]) -> None:
     saved = json.loads(config_path.read_text(encoding="utf-8"))
     current = {**asdict(config), "classes": list(classes)}
+    defaults = asdict(TrainConfig())  # runs paused before a setting existed used its default
     changed = sorted(
-        key for key in current.keys() - RESUMABLE_CHANGES if saved.get(key) != current[key]
+        key
+        for key in current.keys() - RESUMABLE_CHANGES
+        if saved.get(key, defaults.get(key)) != current[key]
     )
     if changed:
         msg = f"Cannot resume: settings differ from the paused run: {', '.join(changed)}."

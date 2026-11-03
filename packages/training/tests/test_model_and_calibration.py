@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import random
+from pathlib import Path
 
 import pytest
 import torch
@@ -157,3 +158,54 @@ def test_initialise_from_run_keeps_known_countries_and_starts_new_ones_fresh(tmp
 
     with pytest.raises(SystemExit, match="width"):
         initialise_from_run(CountryNet(3, width=16), ["CZ"], tmp_path)
+
+
+def test_pretrained_backbone_trains_exports_and_regrades(tmp_path: Path) -> None:
+    import numpy as np
+    import onnxruntime
+    from geo_training.export import export_onnx
+    from geo_training.model import PretrainedNet, build_model
+
+    net = build_model(3, "timm:test_vit", pretrained=False)
+    assert isinstance(net, PretrainedNet)
+    # test_vit is pretrained with mean/std 0.5: app-normalised zeros become the right input.
+    app_zero = torch.zeros(1, 3, 1, 1)
+    expected = (torch.tensor([0.485, 0.456, 0.406]) - 0.5) / 0.5
+    assert torch.allclose((app_zero * net.scale + net.shift).flatten(), expected)
+    assert export_onnx(net, 32, tmp_path / "net.onnx") < 1e-3
+    session = onnxruntime.InferenceSession(str(tmp_path / "net.onnx"))
+    (logits,) = session.run(["logits"], {"image": np.zeros((1, 3, 32, 32), np.float32)})
+    assert np.asarray(logits).shape == (1, 3)
+
+    with pytest.raises(SystemExit, match="Unknown --backbone"):
+        build_model(3, "resnet-9000")
+
+
+def test_run_with_pretrained_backbone_and_fine_tune_needs_same_backbone(
+    tmp_path: Path, cleared_ledger: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import json
+
+    import timm  # type: ignore[import-untyped]
+    from conftest import write_synthetic_split
+    from geo_training.cli import main
+
+    # No downloads in tests: test_vit has no pretrained weights anyway.
+    create = timm.create_model
+    monkeypatch.setattr(
+        timm, "create_model", lambda name, **kw: create(name, **{**kw, "pretrained": False})
+    )
+
+    metadata, images = write_synthetic_split(tmp_path / "osv", per_country=20, seed=2)
+    common = ["run", "--ledger", str(cleared_ledger), "--metadata", str(metadata),
+              "--images", str(images), "--image-size", "32", "--epochs", "1",
+              "--batch-size", "16", "--workers", "0", "--min-count", "5",
+              "--val-fraction", "0.25", "--device", "cpu"]  # fmt: skip
+    vit = tmp_path / "vit"
+    assert main([*common, "--backbone", "timm:test_vit", "--out", str(vit)]) == 0
+    assert json.loads((vit / "config.json").read_text())["backbone"] == "timm:test_vit"
+    score = ["regrade", "--run-dir", str(vit), "--test-metadata", str(metadata),
+             "--test-images", str(images), "--workers", "0", "--device", "cpu"]  # fmt: skip
+    assert main(score) == 0
+    with pytest.raises(SystemExit, match="pass that --backbone"):
+        main([*common, "--width", "8", "--init-from", str(vit), "--out", str(tmp_path / "x")])
