@@ -15,6 +15,7 @@ from collections import Counter
 from collections.abc import Sequence
 from pathlib import Path
 
+from geo_companion.contracts import RightsStatus
 from geo_companion.geoguessr_countries import GEOGUESSR_COUNTRIES
 from geo_companion.paths import application_data_dir, is_inside_repository
 
@@ -174,6 +175,19 @@ def _run(args: argparse.Namespace) -> int:
     samples = deterministic_subset(
         list(read_samples(Path(args.metadata), Path(args.images))), args.max_images
     )
+    if args.extra_metadata:
+        extra = load_record(Path(args.extra_ledger))
+        if extra.rights_status is RightsStatus.QUARANTINED:
+            raise SystemExit(f"Dataset {extra.dataset_id!r} is quarantined; it cannot be used.")
+        samples += read_samples(Path(args.extra_metadata), Path(args.extra_images))
+        # The extra set is named in the model's attribution, which the app shows.
+        record = type(record).model_validate(
+            {
+                **record.model_dump(),
+                "attribution_text": f"{record.attribution_text} Also trained on "
+                f"{extra.source_title} ({extra.license_name}), privately.",
+            }
+        )
     if args.geoguessr_only:
         samples = [s for s in samples if s.country in GEOGUESSR_COUNTRIES]
     train_samples, val_samples = split_train_val(samples, args.val_fraction)
@@ -189,6 +203,7 @@ def _run(args: argparse.Namespace) -> int:
         seed=args.seed,
         num_workers=args.workers,
         device=args.device,
+        init_from=args.init_from,
     )
     model = train_model(
         train_samples, val_samples, classes, config, out_dir,
@@ -254,6 +269,25 @@ def _run(args: argparse.Namespace) -> int:
     return 0
 
 
+def _import_style(args: argparse.Namespace) -> int:
+    from geo_training.geoguessr_style import REPOS, import_sets
+
+    root = (
+        Path(args.data_dir)
+        if args.data_dir
+        else application_data_dir() / "datasets" / "geoguessr-style"
+    )
+    if is_inside_repository(root):
+        raise SystemExit(f"Refusing to store datasets inside the repository: {root}")
+    names = [name.strip() for name in args.sets.split(",") if name.strip()]
+    unknown = [name for name in names if name not in REPOS]
+    if unknown:
+        raise SystemExit(f"Unknown sets: {', '.join(unknown)}; choose from {', '.join(REPOS)}.")
+    summary = import_sets(root, names, offline=args.offline)
+    print(json.dumps({k: v for k, v in summary.items() if k != "per_country"}, indent=2))
+    return 0
+
+
 def _regrade(args: argparse.Namespace) -> int:
     """Re-measure a finished run as the app now uses it: GeoGuessr countries only."""
     import torch
@@ -281,7 +315,14 @@ def _regrade(args: argparse.Namespace) -> int:
         sum(1 for s in samples if s.country in GEOGUESSR_COUNTRIES and s.country not in classes),
     )  # fmt: skip
     result["dropped_non_geoguessr_images"] = dropped
-    out = run_dir / "report-geoguessr.json"
+    # Images of countries the model never learned are misses, not exclusions, on a benchmark.
+    graded = int(result.get("images", 0))
+    unknown = int(result.get("out_of_label_set", 0))
+    if graded + unknown:
+        result["top1_all_images"] = round(
+            float(result.get("top1", 0.0)) * graded / (graded + unknown), 4
+        )
+    out = run_dir / args.out_name
     out.write_text(json.dumps(result, indent=2), encoding="utf-8")
     summary = {k: v for k, v in result.items() if k != "per_country"}
     print(json.dumps({"written": str(out), **summary}, indent=2))
@@ -364,6 +405,13 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         help="pause after the last epoch that fits in this many hours; continue with --resume",
     )
+    run.add_argument("--extra-metadata", help="a second train CSV added after --max-images")
+    run.add_argument("--extra-images", help="directory of <id>.jpg for --extra-metadata")
+    run.add_argument("--extra-ledger", help="rights record of the extra set (not quarantined)")
+    run.add_argument(
+        "--init-from",
+        help="fine-tune from a finished run folder (e.g. M1c) instead of random weights",
+    )
     run.add_argument(
         "--geoguessr-only",
         action="store_true",
@@ -380,7 +428,25 @@ def build_parser() -> argparse.ArgumentParser:
     regrade.add_argument("--batch-size", type=int, default=128)
     regrade.add_argument("--workers", type=int, default=4)
     regrade.add_argument("--device", default="auto")
+    regrade.add_argument(
+        "--out-name",
+        default="report-geoguessr.json",
+        help="report file in the run folder, e.g. report-benchmark.json",
+    )
     regrade.set_defaults(handler=_regrade)
+
+    style = commands.add_parser(
+        "import-geoguessr-style",
+        help="download free GeoGuessr-style image sets and build the fixed benchmark (network)",
+    )
+    style.add_argument("--data-dir", help="default: application data/datasets/geoguessr-style")
+    style.add_argument(
+        "--sets", default="geoguessr,pano,sean", help="comma-separated: geoguessr, pano, sean"
+    )
+    style.add_argument(
+        "--offline", action="store_true", help="convert files already downloaded, fetch nothing"
+    )
+    style.set_defaults(handler=_import_style)
     return parser
 
 
@@ -388,6 +454,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.command == "run" and bool(args.test_metadata) != bool(args.test_images):
         print("--test-metadata and --test-images go together.", file=sys.stderr)
+        return 2
+    extra = ("extra_metadata", "extra_images", "extra_ledger")
+    if args.command == "run" and len({bool(getattr(args, name)) for name in extra}) > 1:
+        print("--extra-metadata, --extra-images and --extra-ledger go together.", file=sys.stderr)
         return 2
     result: int = args.handler(args)
     return result

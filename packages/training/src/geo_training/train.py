@@ -40,6 +40,8 @@ class TrainConfig:
     seed: int = 0
     num_workers: int = 4
     device: str = "auto"
+    # A finished run folder (config.json + final.pt) to fine-tune from instead of random weights.
+    init_from: str | None = None
 
 
 # Settings that may change between the sessions of one run; everything else must match.
@@ -103,6 +105,33 @@ def predict_logits(
     return torch.cat(all_logits), torch.cat(all_labels)
 
 
+def initialise_from_run(model: CountryNet, classes: Sequence[str], run_dir: Path) -> int:
+    """Copy a finished run's weights into ``model``; return how many countries it already knew.
+
+    Everything but the final layer is copied as is. The final layer is matched row by row on
+    the country code, so countries the earlier model knew keep what it learned and new ones
+    start fresh. Fine-tuning this way needs far fewer images than training from scratch.
+    """
+    saved = json.loads((run_dir / "config.json").read_text(encoding="utf-8"))
+    state = torch.load(run_dir / "final.pt", map_location="cpu")
+    if state["head.weight"].shape[1] != model.head.in_features:
+        msg = f"{run_dir} was trained with width {saved['width']}; pass the same --width."
+        raise SystemExit(msg)
+    old_index = {code: index for index, code in enumerate(saved["classes"])}
+    head_weight = model.head.weight.detach().clone()
+    head_bias = model.head.bias.detach().clone()
+    known = 0
+    for index, code in enumerate(classes):
+        if code in old_index:
+            head_weight[index] = state["head.weight"][old_index[code]]
+            head_bias[index] = state["head.bias"][old_index[code]]
+            known += 1
+    state["head.weight"] = head_weight
+    state["head.bias"] = head_bias
+    model.load_state_dict(state)
+    return known
+
+
 def train(
     train_samples: Sequence[Sample],
     val_samples: Sequence[Sample],
@@ -147,7 +176,10 @@ def train(
         generator=loader_generator,
         persistent_workers=False,
     )
-    model = CountryNet(len(classes), width=config.width).to(device)
+    model = CountryNet(len(classes), width=config.width)
+    if config.init_from and not resume:
+        initialise_from_run(model, classes, Path(config.init_from))
+    model = model.to(device)
     optimiser = torch.optim.AdamW(
         model.parameters(), lr=config.learning_rate, weight_decay=config.weight_decay
     )

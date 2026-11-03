@@ -1,0 +1,13 @@
+{
+  "dataset_id": "geoguessr-style",
+  "source_title": "GeoGuessr-style images (marcelomoreno26/geoguessr, stochastic/random_streetview_images_pano_v0.0.2, 0xRafie/geosean11k on Hugging Face)",
+  "source_url": "https://huggingface.co/datasets/marcelomoreno26/geoguessr",
+  "creator": "Hugging Face users marcelomoreno26, stochastic and 0xRafie; imagery from Google Street View and GeoGuessr",
+  "license_name": "Mixed: none stated / MIT (card) / non-commercial research; the imagery stays under Google's and GeoGuessr's terms",
+  "license_url": "https://huggingface.co/datasets/0xRafie/geosean11k",
+  "attribution_text": "GeoGuessr-style screenshots and Street View panoramas from three public Hugging Face datasets, used for private training only.",
+  "accessed_on": "2026-11-02",
+  "reviewed_on": "2026-11-02",
+  "geographic_scope": "About 60 GeoGuessr countries; never shown in the app",
+  "rights_status": "reference-only"
+}
