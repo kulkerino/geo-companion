@@ -107,14 +107,31 @@ class HubFile:
 
 
 def list_hub_files(repo: str) -> list[HubFile]:
-    url = f"{HUB}/api/datasets/{repo}/tree/main?recursive=true"
-    with urllib.request.urlopen(url, timeout=60) as response:
-        entries = json.load(response)
-    return [
-        HubFile(e["path"], int(e["size"]), (e.get("lfs") or {}).get("oid"))
-        for e in entries
-        if e.get("type") == "file"
-    ]
+    """Every file in the dataset repository.
+
+    The Hub API returns its tree 1000 entries at a time and names the next page in a
+    ``Link: <...>; rel="next"`` header, so follow it until there is none.
+    """
+    url: str | None = f"{HUB}/api/datasets/{repo}/tree/main?recursive=true"
+    files: list[HubFile] = []
+    while url:
+        with urllib.request.urlopen(url, timeout=60) as response:
+            entries = json.load(response)
+            url = next_page(response.headers.get("Link", ""))
+        files += [
+            HubFile(e["path"], int(e["size"]), (e.get("lfs") or {}).get("oid"))
+            for e in entries
+            if e.get("type") == "file"
+        ]
+    return files
+
+
+def next_page(link_header: str) -> str | None:
+    """The ``rel="next"`` URL of an HTTP ``Link`` header, if there is one."""
+    for part in link_header.split(","):
+        if 'rel="next"' in part and "<" in part and ">" in part:
+            return part[part.index("<") + 1 : part.index(">")]
+    return None
 
 
 def fetch_file(repo: str, file: HubFile, destination: Path, log_path: Path) -> Path:

@@ -170,3 +170,14 @@ def test_fine_tune_with_an_extra_private_set_and_score_on_a_benchmark(
     with pytest.raises(SystemExit, match="quarantined"):
         main([*common, *extra, "--extra-ledger", str(quarantined), "--out", str(tmp_path / "x")])
     assert main([*common, *extra, "--out", str(tmp_path / "y")]) == 2  # ledger missing
+
+
+def test_next_page_follows_the_hub_link_header() -> None:
+    from geo_training.geoguessr_style import next_page
+
+    url = "https://huggingface.co/api/datasets/a/b/tree/main?recursive=true&cursor=abc"
+    assert next_page(f'<{url}>; rel="next"') == url
+    both = '<https://x.test/p1>; rel="prev", <https://x.test/p3>; rel="next"'
+    assert next_page(both) == "https://x.test/p3"
+    assert next_page("") is None
+    assert next_page('<https://x.test/p1>; rel="prev"') is None
