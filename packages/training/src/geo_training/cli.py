@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from collections import Counter
 from collections.abc import Sequence
@@ -156,6 +157,13 @@ def _photo_pack(args: argparse.Namespace) -> int:
     return 0
 
 
+def default_model_id(backbone: str) -> str:
+    """A model id per network, so race history never merges two different models."""
+    if backbone == "countrynet":
+        return "country-net"
+    return "country-" + re.sub(r"[^a-z0-9]+", "-", backbone.lower()).strip("-")
+
+
 def _run(args: argparse.Namespace) -> int:
     import torch
 
@@ -254,7 +262,7 @@ def _run(args: argparse.Namespace) -> int:
     split = "test" if "test" in reports else "val"
     summary = {**reports[split], "split": split, "calibration": args.calibration}
     write_manifest(
-        model_id=args.model_id,
+        model_id=args.model_id or default_model_id(config.backbone),
         version=args.version,
         artifact=artifact,
         classes=classes,
@@ -264,6 +272,7 @@ def _run(args: argparse.Namespace) -> int:
         dataset=record,
         evaluation={k: v for k, v in summary.items() if k != "per_country"},
         path=out_dir / "manifest.json",
+        backbone=config.backbone,
     )
     torch.save(model.state_dict(), out_dir / "final.pt")
     print(json.dumps({"out_dir": str(out_dir), "onnx_parity": parity, **summary}, indent=2))
@@ -379,7 +388,10 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--test-images")
     run.add_argument("--out", help="output directory (default: application data)")
     run.add_argument("--run-name", default="m1")
-    run.add_argument("--model-id", default="country-net")
+    run.add_argument(
+        "--model-id",
+        help="default: country-net for countrynet, else country-<backbone> (e.g. country-clip-b16)",
+    )
     run.add_argument("--version", default="0.1.0")
     run.add_argument("--image-size", type=int, default=224)
     run.add_argument("--width", type=int, default=64)

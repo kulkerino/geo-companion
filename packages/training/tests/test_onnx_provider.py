@@ -276,3 +276,26 @@ def test_provider_refuses_a_model_without_any_geoguessr_country(tmp_path: Path) 
     manifest.write_text(json.dumps(data))
     with pytest.raises(ModelIntegrityError, match="GeoGuessr"):
         OnnxCountryProvider(manifest)
+
+
+def test_description_names_the_network_and_old_manifests_mean_countrynet(tmp_path: Path) -> None:
+    manifest, _ = export_tiny_model(tmp_path)
+    assert "trained from scratch" in OnnxCountryProvider(manifest).info.description
+    data = json.loads(manifest.read_text(encoding="utf-8"))
+    data.pop("backbone")  # written before the field existed
+    manifest.write_text(json.dumps(data), encoding="utf-8")
+    assert "trained from scratch" in OnnxCountryProvider(manifest).info.description
+    data["backbone"] = "clip-b16"
+    manifest.write_text(json.dumps(data), encoding="utf-8")
+    description = OnnxCountryProvider(manifest).info.description
+    assert "fine-tuned from the pretrained clip-b16 network" in description
+
+
+def test_each_network_gets_its_own_default_model_id() -> None:
+    from geo_training.cli import default_model_id
+
+    assert default_model_id("countrynet") == "country-net"
+    assert default_model_id("clip-b16") == "country-clip-b16"
+    assert default_model_id("timm:vit_base_patch16_clip_224.openai") == (
+        "country-timm-vit-base-patch16-clip-224-openai"
+    )

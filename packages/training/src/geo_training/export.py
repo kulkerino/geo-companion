@@ -58,6 +58,7 @@ def write_manifest(
     dataset: DatasetRecord,
     evaluation: dict[str, Any],
     path: Path,
+    backbone: str = "countrynet",
 ) -> CountryModelManifest:
     manifest = CountryModelManifest(
         model_id=model_id,
@@ -73,6 +74,7 @@ def write_manifest(
         dataset_license=dataset.license_name,
         dataset_attribution=dataset.attribution_text,
         evaluation=evaluation,
+        backbone=backbone,
     )
     path.write_text(json.dumps(manifest.model_dump(mode="json"), indent=2), encoding="utf-8")
     return manifest
