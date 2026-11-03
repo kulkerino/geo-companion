@@ -204,6 +204,7 @@ def _run(args: argparse.Namespace) -> int:
         num_workers=args.workers,
         device=args.device,
         init_from=args.init_from,
+        backbone=args.backbone,
     )
     model = train_model(
         train_samples, val_samples, classes, config, out_dir,
@@ -293,7 +294,7 @@ def _regrade(args: argparse.Namespace) -> int:
     import torch
 
     from geo_training.evaluate import report, restrict_classes
-    from geo_training.model import CountryNet
+    from geo_training.model import build_model
     from geo_training.train import SampleDataset, predict_logits, resolve_device
 
     run_dir = Path(args.run_dir)
@@ -301,7 +302,8 @@ def _regrade(args: argparse.Namespace) -> int:
     manifest = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
     classes: list[str] = config["classes"]
     device = resolve_device(args.device)
-    model = CountryNet(len(classes), width=config["width"])
+    backbone = config.get("backbone", "countrynet")
+    model = build_model(len(classes), backbone, config["width"], pretrained=False)
     model.load_state_dict(torch.load(run_dir / "final.pt", map_location="cpu"))
     model.to(device)
     samples = list(read_samples(Path(args.test_metadata), Path(args.test_images)))
@@ -381,6 +383,11 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--version", default="0.1.0")
     run.add_argument("--image-size", type=int, default=224)
     run.add_argument("--width", type=int, default=64)
+    run.add_argument(
+        "--backbone",
+        default="countrynet",
+        help="countrynet (from scratch), clip-b16 or convnext-t (pretrained), or timm:<name>",
+    )
     run.add_argument("--epochs", type=int, default=30)
     run.add_argument("--batch-size", type=int, default=128)
     run.add_argument("--learning-rate", type=float, default=2e-3)

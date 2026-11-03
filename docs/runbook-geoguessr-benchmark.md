@@ -46,3 +46,19 @@ uv run geo-train regrade --run-dir "$env:LOCALAPPDATA\geo-companion\training\run
 
 Compare the two `report-benchmark.json` files. Routes B (retrain) and C (pretrained backbone)
 are decided from these numbers.
+
+## 4. Route C: pretrained network (about 2 hours)
+
+`--backbone clip-b16` starts from OpenAI's CLIP ViT-B/16, a network that already learned to
+see from hundreds of millions of photos (the first run downloads about 350 MB of weights).
+Only the country layer is new; it learns 10 times faster than the rest. The learning rate is
+low on purpose: a high one wipes out what the network already knows.
+`--backbone convnext-t` is a smaller, faster alternative.
+
+```powershell
+uv run geo-train run --backbone clip-b16 --ledger docs/sources/osv5m.json --metadata $D\metadata\train.csv --images $D\images\train --max-images 150000 --geoguessr-only --extra-metadata $G\metadata\train.csv --extra-images $G\images --extra-ledger docs/sources/geoguessr-style.json --test-metadata $G\metadata\benchmark.csv --test-images $G\images --run-name clip-c1 --epochs 5 --learning-rate 3e-5 --batch-size 64 --min-count 20 --workers 8 --device cuda --max-hours 2.5
+uv run geo-train regrade --run-dir "$env:LOCALAPPDATA\geo-companion\training\runs\clip-c1" --test-metadata $G\metadata\benchmark.csv --test-images $G\images --out-name report-benchmark.json --workers 8
+```
+
+If it pauses at the time limit, run the same command with `--resume` (a later day is fine).
+The exported `model.onnx` takes the same input as before, so the app needs no change.

@@ -35,12 +35,19 @@ training = [
   "onnxruntime>=1.20,<2.0",
   "pillow>=11.0,<13.0",
   "pyarrow>=17.0,<27.0",
+  "timm>=1.0,<2.0",
   "torch>=2.5,<3.0",
+  "torchvision>=0.20,<1.0",
 ]
 
 [tool.uv.sources]
 # CPU wheels on Linux (the laptop and CI); CUDA wheels on the Windows RTX machine.
 torch = [
+  { index = "pytorch-cpu", marker = "sys_platform == 'linux'" },
+  { index = "pytorch-cu128", marker = "sys_platform == 'win32'" },
+]
+# timm needs torchvision, which must come from the same index as torch.
+torchvision = [
   { index = "pytorch-cpu", marker = "sys_platform == 'linux'" },
   { index = "pytorch-cu128", marker = "sys_platform == 'win32'" },
 ]
