@@ -376,9 +376,11 @@ def read_searched(path: Path) -> dict[str, list[Pano]]:
     searched: dict[str, list[Pano]] = {}
     if path.is_file():
         for line in path.read_text(encoding="utf-8").splitlines():
-            if line.strip():
+            try:
                 entry = json.loads(line)
-                searched[entry["seed"]] = [Pano(**pano) for pano in entry["panos"]]
+            except json.JSONDecodeError:  # empty, or cut short when a run was stopped
+                continue
+            searched[entry["seed"]] = [Pano(**pano) for pano in entry["panos"]]
     return searched
 
 
@@ -404,6 +406,22 @@ def fetch(
     def entity(image_id: str) -> dict[str, Any]:
         return get_json(f"{GRAPH}/{image_id}?fields={FIELDS}", token)
 
+    def download(pano: Pano) -> None:
+        target = raw / "panos" / f"{pano.image_id}.jpg"
+        if target.is_file():
+            return
+        try:
+            data = get_bytes(pano.thumb_url)
+        except urllib.error.HTTPError:  # thumbnail links expire; ask for a fresh one
+            data = get_bytes(str(entity(pano.image_id).get("thumb_2048_url") or pano.thumb_url))
+        partial = target.with_suffix(".part")
+        partial.write_bytes(data)
+        partial.replace(target)
+
+    # Panoramas chosen before a run was stopped but not yet downloaded.
+    for seed in seeds:
+        for pano in searched.get(seed.key, []):
+            download(pano)
     with log_path.open("a", encoding="utf-8") as log:
         for index, seed in enumerate(todo, 1):
             tile = tile_of(seed.latitude, seed.longitude)
@@ -417,11 +435,7 @@ def fetch(
             log.write(json.dumps({"seed": seed.key, "panos": [asdict(p) for p in panos]}) + "\n")
             log.flush()
             for pano in panos:
-                target = raw / "panos" / f"{pano.image_id}.jpg"
-                if not target.is_file():
-                    partial = target.with_suffix(".part")
-                    partial.write_bytes(get_bytes(pano.thumb_url))
-                    partial.replace(target)
+                download(pano)
             if index % 25 == 0:
                 found = sum(len(searched[s.key]) for s in todo[:index])
                 print(f"searched {index}/{len(todo)} seeds, {found} panoramas", file=sys.stderr)

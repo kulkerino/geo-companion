@@ -260,3 +260,27 @@ def test_extra_flags_must_come_in_matching_sets() -> None:
     args = ["run", "--ledger", "l", "--metadata", "m", "--images", "i"]
     extra = ["--extra-metadata", "a", "--extra-images", "b", "--extra-ledger", "c"]
     assert main([*args, *extra, "--extra-metadata", "d"]) == 2
+
+
+def test_a_stopped_run_downloads_what_it_missed(tmp_path: Path) -> None:
+    seeds = choose_seeds(write_seed_csv(tmp_path / "train.csv"), 3, ["VN"], 1)
+    root = tmp_path / "mapillary"
+    fake = FakeMapillary(seeds)
+    import_mapillary(
+        root, seeds, "MLY|test", 2,
+        get_json=fake.get_json, get_tile=fake.get_tile, get_bytes=fake.get_bytes,
+    )  # fmt: skip
+    # As if the run had been stopped: two thumbnails missing and a half-written log line.
+    missing = sorted((root / "raw" / "panos").glob("*.jpg"))[:2]
+    for path in missing:
+        path.unlink()
+    with (root / "raw" / "searched.jsonl").open("a", encoding="utf-8") as log:
+        log.write('{"seed": "JP:1')
+    again = FakeMapillary(seeds)
+    summary = import_mapillary(
+        root, seeds, "MLY|test", 2,
+        get_json=again.get_json, get_tile=again.get_tile, get_bytes=again.get_bytes,
+    )  # fmt: skip
+    assert (again.tiles, again.downloads) == (0, 2)
+    assert all(path.is_file() for path in missing)
+    assert summary["panoramas"] == 12 and "panorama not downloaded" not in summary["skipped"]

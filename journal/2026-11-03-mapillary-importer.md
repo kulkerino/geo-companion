@@ -56,3 +56,17 @@ clip-c2 can train on OSV-5M + GeoGuessr-style + Mapillary at once.
 
 Run the full import on the desktop, then train clip-c2/clip-c3 with three sets (repeat the
 `--extra-*` triple) and score it on the GeoGuessr-style benchmark.
+
+## Stopping for the night (20:55 UTC)
+
+- The full import (`geo-train import-mapillary`, defaults) had searched 2,060 of 5,665 seeds and
+  downloaded 1,361 panoramas when kulo ended the session; about 0.66 panoramas per seed.
+- Resume fix: a re-run now downloads panoramas that were chosen but not yet downloaded (with a
+  fresh link if the old one expired) and skips a log line cut short by the stop. Test
+  `test_a_stopped_run_downloads_what_it_missed`; `pytest packages/training/tests/test_mapillary.py`
+  9 passed, `ruff check .` and `mypy` OK.
+- Resume with the same command, from the repository root on the desktop:
+  `uv run --group training --group model geo-train import-mapillary`
+- clip-c2 (started by another session) had finished epoch 2 of 3 (val top-1 0.763) with
+  `last.pt` saved. Resume it with its original command plus `--resume`; it is in the project
+  plan file `current-plan.md`.

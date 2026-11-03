@@ -6,7 +6,7 @@ work that changes it; detailed evidence for each session goes in [`journal/`](jo
 **Last updated:** 2026-11-03
 **Branch:** `main`. PRs #1–#4 are merged, and new work goes on short branches with one PR each into `main`, which kulo merges.
 **GitHub:** [kulkerino/geo-companion](https://github.com/kulkerino/geo-companion) (public, because the professor needs access), remote `origin`; branches `main` and the separate school branch `rocnikovy-projekt` (no shared history, never merged)
-**Next step:** run `geo-train import-mapillary` on the desktop (token in `~/geo-companion-secrets/mapillary-token.txt`), then train a CLIP model on OSV-5M + GeoGuessr-style + Mapillary (repeat the `--extra-*` triple) and score it on the GeoGuessr-style benchmark; then the GeoGuessr-style play mode.
+**Next step:** finish the Mapillary import on the desktop (2,060 of 5,665 seeds done; resume with `uv run --group training --group model geo-train import-mapillary`) and clip-c2 (epoch 2 of 3 done; resume with its original command plus `--resume`, see the journal), then train a CLIP model on OSV-5M + GeoGuessr-style + Mapillary (repeat the `--extra-*` triple) and score it on the GeoGuessr-style benchmark; then the GeoGuessr-style play mode.
 
 ## Task status
 
