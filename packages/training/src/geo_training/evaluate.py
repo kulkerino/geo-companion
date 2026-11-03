@@ -13,6 +13,30 @@ from geo_training.calibration import expected_calibration_error
 MIN_COUNTRY_SUPPORT = 50
 
 
+def restrict_classes(
+    logits: torch.Tensor, labels: torch.Tensor, classes: Sequence[str], allowed: frozenset[str]
+) -> tuple[torch.Tensor, torch.Tensor, list[str], int]:
+    """Grade a model as if it only knew ``allowed`` countries, like the app's answer mask.
+
+    Keeps only the allowed columns (so the other countries can never be answered) and only the
+    images whose true country is allowed (GeoGuessr never shows the others). Returns the new
+    logits, relabelled targets, the kept class names, and how many images were dropped.
+    """
+    keep = [index for index, code in enumerate(classes) if code in allowed]
+    if not keep:
+        raise ValueError("None of the model's countries are allowed.")
+    remap = torch.full((len(classes),), -1, dtype=torch.long)
+    remap[keep] = torch.arange(len(keep))
+    new_labels = remap[labels]
+    rows = new_labels >= 0
+    return (
+        logits[rows][:, keep],
+        new_labels[rows],
+        [classes[index] for index in keep],
+        int((~rows).sum()),
+    )
+
+
 def report(
     logits: torch.Tensor,
     labels: torch.Tensor,

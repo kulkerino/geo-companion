@@ -25,6 +25,7 @@ from geo_companion.contracts import (
     ModelInfo,
     PracticeRoundPublic,
 )
+from geo_companion.geoguessr_countries import GEOGUESSR_COUNTRIES
 from geo_companion.image_input import decode_upload, eval_array, load_rgb
 from geo_companion.models import UnreadablePhotoError
 from geo_companion.paths import is_inside_repository
@@ -84,6 +85,11 @@ class OnnxCountryProvider:
             str(artifact), providers=["CPUExecutionProvider"]
         )
         self._images = images or NoRasterImages()
+        # Only countries with GeoGuessr coverage may be answered: the others are masked out and
+        # the remaining probabilities renormalised, so no retraining is needed.
+        self._allowed = np.array([code in GEOGUESSR_COUNTRIES for code in self.manifest.classes])
+        if not self._allowed.any():
+            raise ModelIntegrityError("The model knows none of GeoGuessr's countries.")
         self.info = ModelInfo(
             model_id=self.manifest.model_id,
             version=self.manifest.version,
@@ -120,6 +126,7 @@ class OnnxCountryProvider:
         image = eval_array(rgb, self.manifest.input_size)
         (logits,) = self._session.run(["logits"], {"image": image[np.newaxis]})
         scaled = np.asarray(logits, dtype=np.float64)[0] / self.manifest.temperature
+        scaled = np.where(self._allowed, scaled, -np.inf)
         probabilities = np.exp(scaled - scaled.max())
         probabilities /= probabilities.sum()
         order = np.argsort(-probabilities, kind="stable")[:TOP_K]

@@ -117,3 +117,20 @@ def test_weighted_threshold_counts_coverage_by_weight() -> None:
     assert abstention.threshold == pytest.approx(0.7)
     assert abstention.coverage == pytest.approx(2.5 / 4.0)
     assert abstention.selective_accuracy == pytest.approx(1.0)
+
+
+def test_restrict_classes_grades_only_allowed_countries() -> None:
+    from geo_training.evaluate import restrict_classes
+
+    logits = torch.tensor([[5.0, 1.0, 0.0], [0.0, 9.0, 1.0], [0.0, 1.0, 3.0]])
+    labels = torch.tensor([1, 1, 2])  # first image is BR but the model's top pick is CN
+    kept_logits, kept_labels, kept, dropped = restrict_classes(
+        logits, labels, ["CN", "BR", "KE"], frozenset({"BR", "KE"})
+    )
+    assert kept == ["BR", "KE"] and dropped == 0
+    assert kept_labels.tolist() == [0, 0, 1]
+    assert kept_logits.argmax(1).tolist() == [0, 0, 1]  # CN can no longer be picked
+    _, labels_only, _, dropped = restrict_classes(
+        logits, torch.tensor([0, 1, 2]), ["CN", "BR", "KE"], frozenset({"BR", "KE"})
+    )
+    assert dropped == 1 and labels_only.tolist() == [0, 1]

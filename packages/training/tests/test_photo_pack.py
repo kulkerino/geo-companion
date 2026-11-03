@@ -17,7 +17,7 @@ from geo_training.photo_pack import read_photo_records, select_photos
 from PIL import Image
 
 # Test-set-style rows: one large country, two smaller ones, one below the minimum count.
-COUNTS = {"US": 30, "JP": 8, "KE": 6, "MC": 2}
+COUNTS = {"US": 30, "JP": 8, "KE": 6, "MC": 2, "CN": 9}  # CN: not in GeoGuessr
 
 
 def api(app: object, method: str, path: str) -> httpx.Response:
@@ -79,7 +79,7 @@ def test_selection_spreads_rounds_over_countries_and_hides_the_order(tmp_path: P
     chosen = select_photos(records, rounds=12, min_count=5, seed=0)
 
     counts = Counter(photo.country for photo in chosen)
-    assert counts == {"US": 4, "JP": 4, "KE": 4}  # MC has too few photos
+    assert counts == {"US": 4, "JP": 4, "KE": 4}  # MC has too few photos, CN is not in GeoGuessr
     assert [photo.country for photo in chosen] != sorted(photo.country for photo in chosen)
     assert chosen == select_photos(records, rounds=12, min_count=5, seed=0)
     assert len(select_photos(records, rounds=100, min_count=5, seed=0)) == 44

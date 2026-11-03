@@ -33,6 +33,7 @@ from geo_companion.contracts import (
     PracticeRound,
     SourceTruthAnswer,
 )
+from geo_companion.geoguessr_countries import GEOGUESSR_COUNTRIES
 from geo_companion.photo_pack import sha256_file
 from geo_companion.starter_pack import content_hash
 from PIL import Image, ImageOps
@@ -92,7 +93,7 @@ def read_photo_records(csv_path: Path, image_dir: Path) -> list[PhotoRecord]:
 def select_photos(
     records: list[PhotoRecord], rounds: int, min_count: int, seed: int
 ) -> list[PhotoRecord]:
-    """Spread ``rounds`` photos evenly over countries with at least ``min_count`` photos.
+    """Spread ``rounds`` photos evenly over GeoGuessr countries with ``min_count`` photos.
 
     Countries take turns (round-robin over a seeded shuffle of each country's photos), so a
     pack is not three quarters US like the raw data. The result is shuffled again so the
@@ -101,7 +102,8 @@ def select_photos(
     rng = random.Random(seed)
     by_country: dict[str, list[PhotoRecord]] = defaultdict(list)
     for record in sorted(records, key=lambda item: item.image_id):
-        by_country[record.country].append(record)
+        if record.country in GEOGUESSR_COUNTRIES:
+            by_country[record.country].append(record)
     eligible = sorted(code for code, items in by_country.items() if len(items) >= min_count)
     for code in eligible:
         rng.shuffle(by_country[code])
