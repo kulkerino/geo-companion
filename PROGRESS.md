@@ -3,10 +3,10 @@
 The current state of the project at a glance. Update this file in the same commit as any
 work that changes it; detailed evidence for each session goes in [`journal/`](journal/).
 
-**Last updated:** 2026-11-02
+**Last updated:** 2026-11-03
 **Branch:** `main`. PRs #1–#4 are merged, and new work goes on short branches with one PR each into `main`, which kulo merges.
 **GitHub:** [kulkerino/geo-companion](https://github.com/kulkerino/geo-companion) (public, because the professor needs access), remote `origin`; branches `main` and the separate school branch `rocnikovy-projekt` (no shared history, never merged)
-**Next step:** race mode step 4 (race with M1c, now exported; then score it in Race history → Model progress), see [`docs/race-mode-plan.md`](docs/race-mode-plan.md). M1c is trained and exported on the RTX 3060 PC (test top-1 0.645); next, load it in the app with the photo pack, and the independent M1 review.
+**Next step:** score clip-c2 (CLIP fine-tuned on all GeoGuessr-style data, training on the PC) on the benchmark and switch `play-clip.ps1` to it if better; then give pretrained models their own manifest id and description; then a Mapillary import for the weak countries (HK, VN, LA, SK, PH; needs kulo's free Mapillary token). Current model in the app: clip-c1, 63.8% top-1 on the GeoGuessr-style benchmark (M1c: 18.2%), see [journal 2026-11-03](journal/2026-11-03-geoguessr-benchmark-and-clip.md).
 
 ## Task status
 
@@ -33,6 +33,7 @@ work that changes it; detailed evidence for each session goes in [`journal/`](jo
 | Race with M1c (race step 4): desktop timing and scripted races | desktop half done (33 ms per race answer, 0 failures in 100 rounds); laptop timing and real races to do | see journal | [2026-11-02](journal/2026-11-02-race-with-m1c-desktop.md) |
 | Race history and model progress on a fixed photo set (race step 5) | done, self-reviewed | see journal | [2026-11-02](journal/2026-11-02-race-history.md) |
 | Race mode projector mode: "Class vs Model" (race step 6) | done, self-reviewed | see journal | [2026-11-02](journal/2026-11-02-race-projector.md) |
+| GeoGuessr-style benchmark; pretrained CLIP model (route C) in the app | done: clip-c1 63.8% top-1 vs M1c 18.2% on the benchmark; PRs #15 and #16 merged | see journal | [2026-11-03](journal/2026-11-03-geoguessr-benchmark-and-clip.md) |
 | 4. Pack lifecycle and source tooling | planned | — | — |
 | 5. Curriculum pipeline | planned | — | — |
 | 6. Optional local model | planned | — | — |
@@ -108,9 +109,15 @@ The full plan is in
 | 2026-11-02 | Class (projector) races are stored with `player = class`; their answers are scored and kept as attempts but skip the spaced-repetition schedule | journal 2026-11-02 race projector |
 | 2026-11-02 | Races reuse practice attempts and the stored post-answer model prediction; late answers (limit + 5 s) count as skips; a model that fails or changes loses that round | journal 2026-11-02 race backend |
 | 2026-11-02 | Model progress compares versions on a fixed photo set named by a hash of its round ids, run once per version and set, totals only; race history counts finished races only | journal 2026-11-02 race history |
+| 2026-11-03 | Pretrained CLIP (route C) replaces M1c as the app's model; route A dropped | journal 2026-11-03 benchmark and CLIP |
+| 2026-11-03 | No Street View or GeoGuessr capture for training; Mapillary (CC BY-SA) is the next source | journal 2026-11-03 benchmark and CLIP |
+| 2026-11-03 | Commits and PRs carry no Claude trailers or footers; long work goes in fresh threads to save tokens, with this file as the handoff | `CLAUDE.md` |
 
 ## Known gaps
 
+- Pretrained models still get the manifest id `country-net` 0.1.0 and a "trained from scratch"
+  description, the same id as M1c, so race history would merge them. Fix before racing CLIP.
+- clip-c1 is 344 MB and takes about 150 ms per photo on the PC CPU; laptop speed not measured.
 - The dummy model is still the default. `GEO_COMPANION_MODEL=onnx:<manifest>` runs a real
   exported model, but only the weak smoke model exists until M1c, and it abstains on starter rounds (SVG
   diagrams, no photo). Stored predictions are keyed by model id and version, so bump the version on
