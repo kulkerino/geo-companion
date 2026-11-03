@@ -3,10 +3,10 @@
 The current state of the project at a glance. Update this file in the same commit as any
 work that changes it; detailed evidence for each session goes in [`journal/`](journal/).
 
-**Last updated:** 2026-11-02
+**Last updated:** 2026-11-03
 **Branch:** `main`. PRs #1–#4 are merged, and new work goes on short branches with one PR each into `main`, which kulo merges.
 **GitHub:** [kulkerino/geo-companion](https://github.com/kulkerino/geo-companion) (public, because the professor needs access), remote `origin`; branches `main` and the separate school branch `rocnikovy-projekt` (no shared history, never merged)
-**Next step:** race mode step 4 (race with M1c, now exported; then score it in Race history → Model progress), see [`docs/race-mode-plan.md`](docs/race-mode-plan.md). M1c is trained and exported on the RTX 3060 PC (test top-1 0.645); next, load it in the app with the photo pack, and the independent M1 review.
+**Next step:** run `geo-train import-mapillary` on the desktop (token in `~/geo-companion-secrets/mapillary-token.txt`), then train a CLIP model on OSV-5M + GeoGuessr-style + Mapillary (repeat the `--extra-*` triple) and score it on the GeoGuessr-style benchmark; then the GeoGuessr-style play mode.
 
 ## Task status
 
@@ -33,6 +33,7 @@ work that changes it; detailed evidence for each session goes in [`journal/`](jo
 | Race with M1c (race step 4): desktop timing and scripted races | desktop half done (33 ms per race answer, 0 failures in 100 rounds); laptop timing and real races to do | see journal | [2026-11-02](journal/2026-11-02-race-with-m1c-desktop.md) |
 | Race history and model progress on a fixed photo set (race step 5) | done, self-reviewed | see journal | [2026-11-02](journal/2026-11-02-race-history.md) |
 | Race mode projector mode: "Class vs Model" (race step 6) | done, self-reviewed | see journal | [2026-11-02](journal/2026-11-02-race-projector.md) |
+| Mapillary panorama importer; several `--extra-*` sets in training | done, self-reviewed; live smoke run 6 panoramas from 16 seeds | see journal | [2026-11-03](journal/2026-11-03-mapillary-importer.md) |
 | 4. Pack lifecycle and source tooling | planned | — | — |
 | 5. Curriculum pipeline | planned | — | — |
 | 6. Optional local model | planned | — | — |
