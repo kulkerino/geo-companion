@@ -3,6 +3,18 @@
 This folder (`~/Documents/geolearn`) is the project's home. Read `PROGRESS.md` first, then the
 latest entry in `journal/`.
 
+## Saving tokens (kulo, 2026-11-03)
+
+- Start a fresh thread for each new task instead of continuing a long one. `PROGRESS.md`
+  ("Next step") and the latest journal entry are the handoff; read them, not old threads.
+- Keep reports short: results, what changed, what kulo must do. No recaps.
+
+## Commits and PRs
+
+Plain commit messages under kulo's git identity, with no `Co-Authored-By` or
+`Claude-Session` trailers. PR bodies keep only the two attribution lines at the top; no
+"Generated with Claude Code" footer and no session link. Claude opens PRs; kulo merges.
+
 ## Documenting progress (required in every working session)
 
 1. Add or extend a dated journal entry, `journal/YYYY-MM-DD-<short-topic>.md`. Base it on
