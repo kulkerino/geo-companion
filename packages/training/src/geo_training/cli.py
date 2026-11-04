@@ -31,6 +31,7 @@ from geo_training.fetch import (
     shard_paths,
 )
 from geo_training.ledger import load_record, require_cleared
+from geo_training.mapillary import WEAK_COUNTRIES
 from geo_training.metadata import read_samples
 from geo_training.splits import deterministic_subset, select_classes, split_train_val
 
@@ -183,12 +184,14 @@ def _run(args: argparse.Namespace) -> int:
     samples = deterministic_subset(
         list(read_samples(Path(args.metadata), Path(args.images))), args.max_images
     )
-    if args.extra_metadata:
-        extra = load_record(Path(args.extra_ledger))
+    for metadata, images, ledger in zip(
+        args.extra_metadata or [], args.extra_images or [], args.extra_ledger or [], strict=True
+    ):
+        extra = load_record(Path(ledger))
         if extra.rights_status is RightsStatus.QUARANTINED:
             raise SystemExit(f"Dataset {extra.dataset_id!r} is quarantined; it cannot be used.")
-        samples += read_samples(Path(args.extra_metadata), Path(args.extra_images))
-        # The extra set is named in the model's attribution, which the app shows.
+        samples += read_samples(Path(metadata), Path(images))
+        # Each extra set is named in the model's attribution, which the app shows.
         record = type(record).model_validate(
             {
                 **record.model_dump(),
@@ -294,6 +297,27 @@ def _import_style(args: argparse.Namespace) -> int:
     if unknown:
         raise SystemExit(f"Unknown sets: {', '.join(unknown)}; choose from {', '.join(REPOS)}.")
     summary = import_sets(root, names, offline=args.offline)
+    print(json.dumps({k: v for k, v in summary.items() if k != "per_country"}, indent=2))
+    return 0
+
+
+def _import_mapillary(args: argparse.Namespace) -> int:
+    from geo_training.mapillary import choose_seeds, import_mapillary, read_token
+
+    app_dir = application_data_dir()
+    root = Path(args.data_dir) if args.data_dir else app_dir / "datasets" / "mapillary"
+    if is_inside_repository(root):
+        raise SystemExit(f"Refusing to store datasets inside the repository: {root}")
+    seed_metadata = (
+        Path(args.seed_metadata)
+        if args.seed_metadata
+        else _dataset_dir(None) / "metadata" / "train.csv"
+    )
+    countries = [c.strip().upper() for c in args.countries.split(",") if c.strip()] or None
+    weak = [c.strip().upper() for c in args.weak.split(",") if c.strip()]
+    seeds = choose_seeds(seed_metadata, args.seeds_per_country, weak, args.weak_factor, countries)
+    client_token = None if args.offline else read_token(Path.home())
+    summary = import_mapillary(root, seeds, client_token, args.per_seed)
     print(json.dumps({k: v for k, v in summary.items() if k != "per_country"}, indent=2))
     return 0
 
@@ -424,9 +448,17 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         help="pause after the last epoch that fits in this many hours; continue with --resume",
     )
-    run.add_argument("--extra-metadata", help="a second train CSV added after --max-images")
-    run.add_argument("--extra-images", help="directory of <id>.jpg for --extra-metadata")
-    run.add_argument("--extra-ledger", help="rights record of the extra set (not quarantined)")
+    run.add_argument(
+        "--extra-metadata",
+        action="append",
+        help="another train CSV added after --max-images; repeat for several sets",
+    )
+    run.add_argument(
+        "--extra-images", action="append", help="directory of <id>.jpg for each --extra-metadata"
+    )
+    run.add_argument(
+        "--extra-ledger", action="append", help="rights record of each extra set (not quarantined)"
+    )
     run.add_argument(
         "--init-from",
         help="fine-tune from a finished run folder (e.g. M1c) instead of random weights",
@@ -466,6 +498,26 @@ def build_parser() -> argparse.ArgumentParser:
         "--offline", action="store_true", help="convert files already downloaded, fetch nothing"
     )
     style.set_defaults(handler=_import_style)
+
+    mapillary = commands.add_parser(
+        "import-mapillary",
+        help="download Mapillary panoramas near OSV-5M spots, cut into views (network, token)",
+    )
+    mapillary.add_argument("--data-dir", help="default: application data/datasets/mapillary")
+    mapillary.add_argument(
+        "--seed-metadata", help="OSV-5M train CSV to take seed spots from (default: fetched)"
+    )
+    mapillary.add_argument("--seeds-per-country", type=int, default=60)
+    mapillary.add_argument("--per-seed", type=int, default=3, help="panoramas kept per seed")
+    mapillary.add_argument(
+        "--weak", default=",".join(WEAK_COUNTRIES), help="countries that get more seeds"
+    )
+    mapillary.add_argument("--weak-factor", type=int, default=3)
+    mapillary.add_argument("--countries", default="", help="only these (default: all GeoGuessr)")
+    mapillary.add_argument(
+        "--offline", action="store_true", help="convert what is downloaded, fetch nothing"
+    )
+    mapillary.set_defaults(handler=_import_mapillary)
     return parser
 
 
@@ -475,8 +527,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         print("--test-metadata and --test-images go together.", file=sys.stderr)
         return 2
     extra = ("extra_metadata", "extra_images", "extra_ledger")
-    if args.command == "run" and len({bool(getattr(args, name)) for name in extra}) > 1:
-        print("--extra-metadata, --extra-images and --extra-ledger go together.", file=sys.stderr)
+    if args.command == "run" and len({len(getattr(args, name) or []) for name in extra}) > 1:
+        print(
+            "Give --extra-metadata, --extra-images and --extra-ledger once each per extra set.",
+            file=sys.stderr,
+        )
         return 2
     result: int = args.handler(args)
     return result

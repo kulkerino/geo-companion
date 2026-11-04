@@ -6,7 +6,7 @@ work that changes it; detailed evidence for each session goes in [`journal/`](jo
 **Last updated:** 2026-11-03
 **Branch:** `main`. PRs #1–#4 are merged, and new work goes on short branches with one PR each into `main`, which kulo merges.
 **GitHub:** [kulkerino/geo-companion](https://github.com/kulkerino/geo-companion) (public, because the professor needs access), remote `origin`; branches `main` and the separate school branch `rocnikovy-projekt` (no shared history, never merged)
-**Next step:** score clip-c2 (CLIP fine-tuned on all GeoGuessr-style data, training on the PC) on the benchmark and switch `play-clip.ps1` to it if better; then give pretrained models their own manifest id and description; then a Mapillary import for the weak countries (HK, VN, LA, SK, PH; needs kulo's free Mapillary token). Current model in the app: clip-c1, 63.8% top-1 on the GeoGuessr-style benchmark (M1c: 18.2%), see [journal 2026-11-03](journal/2026-11-03-geoguessr-benchmark-and-clip.md).
+**Next step:** finish the Mapillary import on the desktop (2,060 of 5,665 seeds done; resume with `uv run --group training --group model geo-train import-mapillary`) and clip-c2 (epoch 2 of 3 done; resume with its original command plus `--resume`, see the journal; score it on the benchmark and switch `play-clip.ps1` to it if it beats clip-c1), then train a CLIP model on OSV-5M + GeoGuessr-style + Mapillary (repeat the `--extra-*` triple) and score it on the GeoGuessr-style benchmark; then the GeoGuessr-style play mode.
 
 ## Task status
 
@@ -35,6 +35,7 @@ work that changes it; detailed evidence for each session goes in [`journal/`](jo
 | Race mode projector mode: "Class vs Model" (race step 6) | done, self-reviewed | see journal | [2026-11-02](journal/2026-11-02-race-projector.md) |
 | GeoGuessr-style benchmark; pretrained CLIP model (route C) in the app | done: clip-c1 63.8% top-1 vs M1c 18.2% on the benchmark; PRs #15 and #16 merged | see journal | [2026-11-03](journal/2026-11-03-geoguessr-benchmark-and-clip.md) |
 | Own model id and description for CLIP models (race history no longer merges them with M1c) | done, self-reviewed | see journal | [2026-11-03](journal/2026-11-03-clip-model-id.md) |
+| Mapillary panorama importer; several `--extra-*` sets in training | done, self-reviewed; live smoke run 6 panoramas from 16 seeds | see journal | [2026-11-03](journal/2026-11-03-mapillary-importer.md) |
 | 4. Pack lifecycle and source tooling | planned | — | — |
 | 5. Curriculum pipeline | planned | — | — |
 | 6. Optional local model | planned | — | — |

@@ -1,0 +1,13 @@
+{
+  "dataset_id": "mapillary-panos",
+  "source_title": "Mapillary 360-degree panoramas near OSV-5M spots (Mapillary Graph API)",
+  "source_url": "https://www.mapillary.com/developer/api-documentation",
+  "creator": "Mapillary contributors; each panorama's creator is listed in metadata/attribution.csv",
+  "license_name": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "attribution_text": "Street-level panoramas by Mapillary contributors, licensed CC BY-SA 4.0, cut into GeoGuessr-like views for private training.",
+  "accessed_on": "2026-11-03",
+  "reviewed_on": "2026-11-03",
+  "geographic_scope": "GeoGuessr countries with OSV-5M coverage; never shown in the app until kulo clears it",
+  "rights_status": "reference-only"
+}
