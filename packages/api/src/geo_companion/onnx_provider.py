@@ -61,6 +61,12 @@ def _sha256_file(path: Path) -> str:
     return f"sha256:{digest.hexdigest()}"
 
 
+def _trained(backbone: str) -> str:
+    if backbone == "countrynet":
+        return "trained from scratch"
+    return f"fine-tuned from the pretrained {backbone} network"
+
+
 class OnnxCountryProvider:
     """Calibrated top-3 countries from a photo, or an abstention below the manifest threshold."""
 
@@ -96,7 +102,8 @@ class OnnxCountryProvider:
             runtime="onnx",
             is_placeholder=False,
             description=(
-                f"Country classifier trained from scratch on {self.manifest.trained_on}. "
+                f"Country classifier {_trained(self.manifest.backbone)} on "
+                f"{self.manifest.trained_on}. "
                 f"It sees photos only and abstains when unsure or when a round has no photo. "
                 f"{self.manifest.dataset_attribution}"
             ),
