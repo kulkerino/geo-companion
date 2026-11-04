@@ -34,6 +34,7 @@ work that changes it; detailed evidence for each session goes in [`journal/`](jo
 | Race history and model progress on a fixed photo set (race step 5) | done, self-reviewed | see journal | [2026-11-02](journal/2026-11-02-race-history.md) |
 | Race mode projector mode: "Class vs Model" (race step 6) | done, self-reviewed | see journal | [2026-11-02](journal/2026-11-02-race-projector.md) |
 | GeoGuessr-style benchmark; pretrained CLIP model (route C) in the app | done: clip-c1 63.8% top-1 vs M1c 18.2% on the benchmark; PRs #15 and #16 merged | see journal | [2026-11-03](journal/2026-11-03-geoguessr-benchmark-and-clip.md) |
+| Own model id and description for CLIP models (race history no longer merges them with M1c) | done, self-reviewed | see journal | [2026-11-03](journal/2026-11-03-clip-model-id.md) |
 | 4. Pack lifecycle and source tooling | planned | — | — |
 | 5. Curriculum pipeline | planned | — | — |
 | 6. Optional local model | planned | — | — |

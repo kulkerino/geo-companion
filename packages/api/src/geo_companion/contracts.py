@@ -332,6 +332,8 @@ class CountryModelManifest(ModelManifest):
     dataset_license: str = Field(min_length=1)
     dataset_attribution: str = Field(min_length=1)
     evaluation: dict[str, Any]
+    # The network the model was trained with: "countrynet" (from scratch) or a pretrained one.
+    backbone: str = Field(default="countrynet", min_length=1)
 
 
 Rate = Annotated[float, Field(ge=0, le=1)]
