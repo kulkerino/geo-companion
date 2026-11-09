@@ -133,6 +133,8 @@ Each PR has its own journal entry and a `PROGRESS.md` update, as usual.
 2. 5 rounds per race, with a per-round time limit chosen like GeoGuessr's game settings.
 3. Laptop vs desktop model: decide from measured numbers in step 4 (speed and reliability; the
    accuracy is the same, it is the same model file).
+   Measured: desktop 33 ms, laptop about 23 ms per race answer, 0 failures, so races run on
+   the laptop ([2026-11-09](../journal/2026-11-09-race-laptop-timing.md)).
 4. No racing the dummy; race once M1c is in. Track model versions so future models can be
    compared on a graph.
 5. Race answers count as practice for spaced repetition (this trains the player, not the model).
