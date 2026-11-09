@@ -1,9 +1,9 @@
-# Geo Companion — progress
+﻿# Geo Companion — progress
 
 The current state of the project at a glance. Update this file in the same commit as any
 work that changes it; detailed evidence for each session goes in [`journal/`](journal/).
 
-**Last updated:** 2026-11-03
+**Last updated:** 2026-11-04
 **Branch:** `main`. PRs #1–#4 are merged, and new work goes on short branches with one PR each into `main`, which kulo merges.
 **GitHub:** [kulkerino/geo-companion](https://github.com/kulkerino/geo-companion) (public, because the professor needs access), remote `origin`; branches `main` and the separate school branch `rocnikovy-projekt` (no shared history, never merged)
 **Next step:** finish the Mapillary import on the desktop (2,060 of 5,665 seeds done; resume with `uv run --group training --group model geo-train import-mapillary`) and clip-c2 (epoch 2 of 3 done; resume with its original command plus `--resume`, see the journal; score it on the benchmark and switch `play-clip.ps1` to it if it beats clip-c1), then train a CLIP model on OSV-5M + GeoGuessr-style + Mapillary (repeat the `--extra-*` triple) and score it on the GeoGuessr-style benchmark; then the GeoGuessr-style play mode.
