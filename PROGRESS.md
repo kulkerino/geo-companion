@@ -1,12 +1,12 @@
-﻿# Geo Companion — progress
+# Geo Companion — progress
 
 The current state of the project at a glance. Update this file in the same commit as any
 work that changes it; detailed evidence for each session goes in [`journal/`](journal/).
 
-**Last updated:** 2026-11-04
+**Last updated:** 2026-11-09
 **Branch:** `main`. PRs #1–#4 are merged, and new work goes on short branches with one PR each into `main`, which kulo merges.
 **GitHub:** [kulkerino/geo-companion](https://github.com/kulkerino/geo-companion) (public, because the professor needs access), remote `origin`; branches `main` and the separate school branch `rocnikovy-projekt` (no shared history, never merged)
-**Next step:** finish the Mapillary import on the desktop (2,060 of 5,665 seeds done; resume with `uv run --group training --group model geo-train import-mapillary`) and clip-c2 (epoch 2 of 3 done; resume with its original command plus `--resume`, see the journal; score it on the benchmark and switch `play-clip.ps1` to it if it beats clip-c1), then train a CLIP model on OSV-5M + GeoGuessr-style + Mapillary (repeat the `--extra-*` triple) and score it on the GeoGuessr-style benchmark; then the GeoGuessr-style play mode.
+**Next step:** finish the Mapillary import on the desktop (2,060 of 5,665 seeds done; resume with `uv run --group training --group model geo-train import-mapillary`) and clip-c2 (epoch 2 of 3 done; resume with its original command plus `--resume`, see the journal; score it on the benchmark and switch `play-clip.ps1` to it if it beats clip-c1), then train a CLIP model on OSV-5M + GeoGuessr-style + Mapillary (repeat the `--extra-*` triple) and score it on the GeoGuessr-style benchmark; then the GeoGuessr-style play mode. Race step 4 leftover: copy M1c's files from the PC to `~/.local/share/geo-companion/training/runs/m1c/` (runbook section 5), then kulo plays a few real races on the laptop.
 
 ## Task status
 
@@ -30,7 +30,7 @@ work that changes it; detailed evidence for each session goes in [`journal/`](jo
 | Race mode plan; searchable country list for guesses (race step 1) | done, self-reviewed | see journal | [2026-11-02](journal/2026-11-02-race-mode-plan-country-picker.md) |
 | Race mode backend: race API, storage and scoring (race step 2) | done, self-reviewed | see journal | [2026-11-02](journal/2026-11-02-race-backend.md) |
 | Race mode screen: start, countdown, side-by-side reveal, summary (race step 3) | done, self-reviewed | see journal | [2026-11-02](journal/2026-11-02-race-screen.md) |
-| Race with M1c (race step 4): desktop timing and scripted races | desktop half done (33 ms per race answer, 0 failures in 100 rounds); laptop timing and real races to do | see journal | [2026-11-02](journal/2026-11-02-race-with-m1c-desktop.md) |
+| Race with M1c (race step 4): desktop timing and scripted races | timing done on both machines: desktop 33 ms, laptop 22–25 ms per race answer (laptop measured with an untrained network of M1c's exact shape), 0 failures; real races with M1c on the laptop still to do (M1c files are only on the PC) | see journals | [2026-11-02](journal/2026-11-02-race-with-m1c-desktop.md), [2026-11-09](journal/2026-11-09-race-laptop-timing.md) |
 | Race history and model progress on a fixed photo set (race step 5) | done, self-reviewed | see journal | [2026-11-02](journal/2026-11-02-race-history.md) |
 | Race mode projector mode: "Class vs Model" (race step 6) | done, self-reviewed | see journal | [2026-11-02](journal/2026-11-02-race-projector.md) |
 | GeoGuessr-style benchmark; pretrained CLIP model (route C) in the app | done: clip-c1 63.8% top-1 vs M1c 18.2% on the benchmark; PRs #15 and #16 merged | see journal | [2026-11-03](journal/2026-11-03-geoguessr-benchmark-and-clip.md) |
